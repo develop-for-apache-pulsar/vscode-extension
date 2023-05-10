@@ -1,11 +1,11 @@
 name: Build & Publish
-on: [workflow_dispatch]
-
-inputs:
-  publishToMarketplace:
-    description: 'Weather to publish to Open VSX and Visual Studio marketplace or not'
-    required: true
-    default: false
+on: 
+  workflow_dispatch:
+    inputs:
+      publishToMarketplace:
+        description: 'Weather to publish to Open VSX and Visual Studio marketplace or not'
+        required: true
+        default: "false"
 
 jobs:
   build:
@@ -70,6 +70,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ steps.create_vsix.outputs.vsixPath}}
-          asset_name: ${{ steps.create_vsix.outputs.vsixPath}}
+          asset_path: ${{ steps.publishToOpenVSX.outputs.vsixPath}}
+          asset_name: ${{ steps.publishToOpenVSX.outputs.vsixPath}}
           asset_content_type: application/vsix
