@@ -1,0 +1,39 @@
+= Apache Pulsar VScode Extension
+
+This extension provides support for https://pulsar.apache.org/[Apache Pulsar^] in VSCode. Currently, it supports the following features:
+
+- Connect to a Pulsar cluster
+
+== Getting Started
+
+Visit the release page to download the latest version of the extension. Once installed you'll notice a new Pulsar icon in the activity bar. Click it to activate the extension and you'll be given the option to save your provider configuration.
+
+[TIP]
+====
+For a quick guide on loading .vsix in VScode, https://code.visualstudio.com/docs/editor/extension-marketplace#_install-from-a-vsix[read this^].
+====
+
+== Pulsar Admin Providers
+
+This extension creates the concept of a provider hosting a Pulsar Cluster. You would normally use the pulsar-admin cli to manage that cluster. This extension uses a typescript implementation of the pulsar-admin cli to provide a UI for managing the cluster.
+
+Currently there are 3 types of providers supported:
+
+- Standalone: thats a single instance of Pulsar running locally
+- Private Service: thats a Pulsar cluster running in a private network like Kubernetes
+- DataStax Astra Streaming: thats a Pulsar cluster running in https://www.datastax.com/products/astra-streaming[DataStax Astra Streaming^].
+
+[NOTE]
+====
+If you work with a managed provider of Apache Pulsar, let's create a provider for your platform!
+====
+
+Not all providers are created the same. Some use tokens some don't. Some managed version of Pulsar don't support all the features of an OSS cluster. This extension tries to be as flexible as possible to support all the different providers, while still giving the consumer a consistent experience.
+
+== Contributing
+
+All contributors are welcome! It helps if you are familiar with Typescript (that's what the extension is written in,) but it's not required. If you are interested in contributing, please reach out to us.
+
+== Roadmap of your ideas
+
+We've got high hopes for this extension. If you have an idea of a feature that would make it even better, please open an issue and let's discuss it! You can review the current roadmap in https://github.com/orgs/pulsar-admin-clients/projects/1[the GitHub project].
