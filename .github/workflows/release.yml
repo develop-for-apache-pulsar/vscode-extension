@@ -38,10 +38,6 @@ jobs:
         run: npm ci
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
-#
-#      # Run tests
-#      - name: Build
-#        run: npm run compile
 
       - name: Get current package version
         id: package_version
@@ -53,20 +49,20 @@ jobs:
           version: ${{ steps.package_version.outputs.current-version }}
           path: 'CHANGELOG.md'
 
-      - name: Publish to Open VSX Registry
-        uses: HaaLeo/publish-vscode-extension@v1
-        id: publishToOpenVSX
-        with:
-          pat: ${{ secrets.OPEN_VSX_TOKEN }}
-          dryRun: ${{ github.event.inputs.dry_run != 'true' }}
-
-      - name: Publish to Visual Studio Marketplace
-        uses: HaaLeo/publish-vscode-extension@v1
-        with:
-          pat: ${{ secrets.VS_MARKETPLACE_TOKEN }}
-          registryUrl: https://marketplace.visualstudio.com
-          extensionFile: ${{ steps.publishToOpenVSX.outputs.vsixPath }}
-          dryRun: ${{ github.event.inputs.dry_run != 'true' }}
+#      - name: Publish to Open VSX Registry
+#        uses: HaaLeo/publish-vscode-extension@v1
+#        id: publishToOpenVSX
+#        with:
+#          pat: ${{ secrets.OPEN_VSX_TOKEN }}
+#          dryRun: ${{ github.event.inputs.dry_run == 'true' }}
+#
+#      - name: Publish to Visual Studio Marketplace
+#        uses: HaaLeo/publish-vscode-extension@v1
+#        with:
+#          pat: ${{ secrets.VS_MARKETPLACE_TOKEN }}
+#          registryUrl: https://marketplace.visualstudio.com
+#          extensionFile: ${{ steps.publishToOpenVSX.outputs.vsixPath }}
+#          dryRun: ${{ github.event.inputs.dry_run == 'true' }}
 
       - name: Release
         uses: softprops/action-gh-release@v1
@@ -81,23 +77,3 @@ jobs:
           prerelease: ${{ github.event.inputs.prerelease == 'true' }}
           token: ${{ secrets.DDIERUF_PAT }}
           files: ${{ steps.publishToOpenVSX.outputs.vsixPath}}
-
-#      - name: Create a Release
-#        id: create_release
-#        uses: actions/create-release@v1
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#        with:
-#          tag_name : ${{ steps.package_version.outputs.current-version}}
-#          release_name: ${{ steps.package_version.outputs.current-version}}
-#          body: Publish ${{ steps.package_version.outputs.current-version}}
-#
-#      - name: Attach vsix to release
-#        uses: actions/upload-release-asset@v1
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#        with:
-#          upload_url: ${{ steps.create_release.outputs.upload_url }}
-#          asset_path: ${{ steps.publishToOpenVSX.outputs.vsixPath}}
-#          asset_name: ${{ steps.publishToOpenVSX.outputs.vsixPath}}
-#          asset_content_type: application/vsix
