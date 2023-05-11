@@ -1,18 +1,16 @@
-import {IPulsarAdminProviderNode, PulsarAdminProviderNode, PulsarAdminProviderTree} from "./nodes/pulsarAdminProvider";
+import {IPulsarAdminProviderNode, PulsarAdminProviderTree} from "./nodes/pulsarAdminProvider";
 import {Host} from "../../utils/host";
 import * as vscode from "vscode";
 import {affectsUs} from "../config/config";
-import {ClusterNode, ClusterTree, IClusterNode} from "./nodes/cluster";
-import {ITenantNode, TenantNode, TenantTree} from "./nodes/tenant";
-import {INamespaceNode, NamespaceNode, NamespaceTree} from "./nodes/namespace";
+import {ClusterTree, IClusterNode} from "./nodes/cluster";
+import {ITenantNode, TenantTree} from "./nodes/tenant";
+import {INamespaceNode, NamespaceTree} from "./nodes/namespace";
 import {FolderNode} from "./nodes/folder";
-import {ITopicNode, TopicNode, TopicTree} from "./nodes/topic";
-import {ConnectorSourceNode, ConnectorSourceTree, IConnectorSourceNode} from "./nodes/connectorSource";
-import {ConnectorSinkNode, ConnectorSinkTree, IConnectorSinkNode} from "./nodes/connectorSink";
-import {FunctionNode, FunctionTree, IFunctionNode} from "./nodes/function";
-import {FolderTypes, AllPulsarAdminExplorerNodeTypes} from "./nodes/types";
-import {IMessageNode, MessageNode, MessageTree} from "./nodes/message";
-import {ErrorNode, ErrorTree, IErrorNode} from "./nodes/error";
+import {TopicTree} from "./nodes/topic";
+import {ConnectorSourceTree} from "./nodes/connectorSource";
+import {ConnectorSinkTree} from "./nodes/connectorSink";
+import {FunctionTree} from "./nodes/function";
+import {AllPulsarAdminExplorerNodeTypes, CONTEXT_VALUES, FolderTypes} from "./nodes/types";
 import {BuildPulsarAdminProviderConfigs} from "../pulsarAdminProvider/pulsarAdminProviders";
 import {PulsarAdminProviders} from "../pulsarAdminProvider";
 
@@ -32,7 +30,7 @@ export class PulsarAdminExplorerTree implements vscode.TreeDataProvider<AllPulsa
     );
   }
 
-  constructor(host: Host, private readonly providerRegistry: PulsarAdminProviders) {
+  constructor(host: Host, private readonly providerRegistry: PulsarAdminProviders, private readonly context: vscode.ExtensionContext) {
     host.onDidChangeConfiguration((change) => {
       if (affectsUs(change)) {
         this.refresh();
@@ -41,85 +39,54 @@ export class PulsarAdminExplorerTree implements vscode.TreeDataProvider<AllPulsa
   }
 
   public async getChildren(parent: AllPulsarAdminExplorerNodeTypes | undefined): Promise<AllPulsarAdminExplorerNodeTypes[]> {
-    // If a parent is provided as this level of the tree, then we need to get the children
-    if (parent !== undefined) {
-      switch (parent.constructor.name) {
-        case PulsarAdminProviderNode.name:
-          const provider = parent as PulsarAdminProviderNode;
-          return new ClusterTree().getChildren(provider);
-        case ClusterNode.name:
-          const cluster = parent as ClusterNode;
-          return new TenantTree().getChildren(cluster);
-        case TenantNode.name:
-          const tenant = parent as TenantNode;
-          return new NamespaceTree().getChildren(tenant);
-        case NamespaceNode.name:
-          const namespace = parent as NamespaceNode;
-          // Build a tree of all the namespaced objects
-          return [
-            new FolderNode(namespace.pulsarAdmin, 'Topics', FolderTypes.topicFolder, namespace.tenantName, namespace.label),
-            new FolderNode(namespace.pulsarAdmin, 'Connectors', FolderTypes.connectorFolder, namespace.tenantName, namespace.label),
-            new FolderNode(namespace.pulsarAdmin, 'Functions', FolderTypes.functionFolder, namespace.tenantName, namespace.label),
-          ];
-        case FolderNode.name:
-          const topicFolder = parent as FolderNode;
-          switch (topicFolder.folderType) {
-            case FolderTypes.topicFolder:
-              const topicFolder = parent as FolderNode;
-              return new TopicTree(topicFolder.pulsarAdmin).getChildren(topicFolder.tenantName, topicFolder.namespace);
-            case FolderTypes.connectorFolder:
-              const connectorFolder = parent as FolderNode;
-              return [
-                new FolderNode(connectorFolder.pulsarAdmin, 'Sources', FolderTypes.sourceFolder, connectorFolder.tenantName, connectorFolder.namespace),
-                new FolderNode(connectorFolder.pulsarAdmin, 'Sinks', FolderTypes.sinkFolder, connectorFolder.tenantName, connectorFolder.namespace),
-              ];
-            case FolderTypes.sourceFolder:
-              const sourceFolder = parent as FolderNode;
-              return new ConnectorSourceTree(sourceFolder.pulsarAdmin).getChildren(sourceFolder.tenantName, sourceFolder.namespace);
-            case FolderTypes.sinkFolder:
-              const sinkFolder = parent as FolderNode;
-              return new ConnectorSinkTree(sinkFolder.pulsarAdmin).getChildren(sinkFolder.tenantName, sinkFolder.namespace);
-            case FolderTypes.functionFolder:
-              const functionFolder = parent as FolderNode;
-              return new FunctionTree(functionFolder.pulsarAdmin).getChildren(functionFolder.tenantName, functionFolder.namespace);
-          }
-      }
-
-      return []; // the parent type is unknown
+    if (parent === undefined) {
+      const pulsarAdminProviderConfigs = await BuildPulsarAdminProviderConfigs(this.providerRegistry);
+      return new PulsarAdminProviderTree(this.context).getChildren(pulsarAdminProviderConfigs);
     }
 
-    // Otherwise if there is no parent, then we need to get the saved configs
-    const pulsarAdminProviderConfigs = await BuildPulsarAdminProviderConfigs(this.providerRegistry);
-    return new PulsarAdminProviderTree().getChildren(pulsarAdminProviderConfigs);
+    switch (parent.contextValue) {
+      case CONTEXT_VALUES.provider:
+        const provider = parent as IPulsarAdminProviderNode;
+        return new ClusterTree().getChildren(provider);
+      case CONTEXT_VALUES.cluster:
+        const cluster = parent as IClusterNode;
+        return new TenantTree().getChildren(cluster);
+      case CONTEXT_VALUES.tenant:
+        const tenant = parent as ITenantNode;
+        return new NamespaceTree().getChildren(tenant);
+      case CONTEXT_VALUES.namespace:
+        const namespace = parent as INamespaceNode;
+        // Build a tree of all the namespaced objects
+        return [
+          new FolderNode(namespace.pulsarAdmin, 'Topics', FolderTypes.topicFolder, namespace.tenantName, namespace.label),
+          new FolderNode(namespace.pulsarAdmin, 'Connectors', FolderTypes.connectorFolder, namespace.tenantName, namespace.label),
+          new FolderNode(namespace.pulsarAdmin, 'Functions', FolderTypes.functionFolder, namespace.tenantName, namespace.label),
+        ];
+      case CONTEXT_VALUES.folder:
+        const folderNode = parent as FolderNode;
+
+        switch (folderNode.folderType) {
+          case FolderTypes.topicFolder:
+            return new TopicTree(folderNode.pulsarAdmin).getChildren(folderNode.tenantName, folderNode.namespace);
+          case FolderTypes.connectorFolder:
+            return [
+              new FolderNode(folderNode.pulsarAdmin, 'Sources', FolderTypes.sourceFolder, folderNode.tenantName, folderNode.namespace),
+              new FolderNode(folderNode.pulsarAdmin, 'Sinks', FolderTypes.sinkFolder, folderNode.tenantName, folderNode.namespace),
+            ];
+          case FolderTypes.sourceFolder:
+            return new ConnectorSourceTree(folderNode.pulsarAdmin).getChildren(folderNode.tenantName, folderNode.namespace);
+          case FolderTypes.sinkFolder:
+            return new ConnectorSinkTree(folderNode.pulsarAdmin).getChildren(folderNode.tenantName, folderNode.namespace);
+          case FolderTypes.functionFolder:
+            return new FunctionTree(folderNode.pulsarAdmin).getChildren(folderNode.tenantName, folderNode.namespace);
+        }
+    }
+
+    return []; // the parent type is unknown
   }
 
-  public getTreeItem(element: AllPulsarAdminExplorerNodeTypes): vscode.TreeItem | Thenable<vscode.TreeItem> {
-    switch (element.constructor.name) {
-      case PulsarAdminProviderNode.name:
-        return PulsarAdminProviderTree.getTreeItem(element as IPulsarAdminProviderNode);
-      case ClusterNode.name:
-        return ClusterTree.getTreeItem(element as IClusterNode);
-      case TenantNode.name:
-        return TenantTree.getTreeItem(element as ITenantNode);
-      case NamespaceNode.name:
-        return NamespaceTree.getTreeItem(element as INamespaceNode);
-      case TopicNode.name:
-        return TopicTree.getTreeItem(element as ITopicNode);
-      case ConnectorSourceNode.name:
-        return ConnectorSourceTree.getTreeItem(element as IConnectorSourceNode);
-      case ConnectorSinkNode.name:
-        return ConnectorSinkTree.getTreeItem(element as IConnectorSinkNode);
-      case FunctionNode.name:
-        return FunctionTree.getTreeItem(element as IFunctionNode);
-      case MessageNode.name:
-        return MessageTree.getTreeItem(element as IMessageNode);
-      case ErrorNode.name:
-        return ErrorTree.getTreeItem(element as IErrorNode);
-      case FolderNode.name:
-        return new vscode.TreeItem(element.label, vscode.TreeItemCollapsibleState.Collapsed);
-      default:
-        return new vscode.TreeItem("unknown element", vscode.TreeItemCollapsibleState.Collapsed);
-    }
+  public getTreeItem(element: AllPulsarAdminExplorerNodeTypes): AllPulsarAdminExplorerNodeTypes | Thenable<AllPulsarAdminExplorerNodeTypes> {
+    return element;
   }
 
   public refresh(node?: any): void {

@@ -9,8 +9,8 @@ class Settings {
         this.typeName = 'datastax-astra-streaming';
         this.displayName = 'Astra Streaming';
         this.description = 'A tenant hosted on DataStax Astra Streaming, using JWT token auth. Note: you\'ll need your Astra token to complete this wizard.';
-        this.darkIconFileName = 'Astra-Logo-dark.svg';
-        this.lightIconFileName = 'Astra-Logo-light.svg';
+        this.darkIconFileName = 'ds-black_300.png';
+        this.lightIconFileName = 'ds-white_300.png';
         this.saveProviderWizard = class {
             constructor(wizard) {
                 this.wizard = wizard;
@@ -18,6 +18,7 @@ class Settings {
                 this.astraToken = "";
                 this.streamingClusters = [];
                 this.streamingTenants = [];
+                this.configName = "";
             }
             startWizard() {
                 return this.astraTokenPage();
@@ -34,6 +35,10 @@ class Settings {
                         break;
                     case SaveProviderMessageCommand.cancel:
                         this.wizard.dispose();
+                        break;
+                    case SaveProviderMessageCommand.setConfigName:
+                        const providerName = message.text;
+                        this.configName = providerName;
                         break;
                 }
             }
@@ -100,7 +105,22 @@ class Settings {
                 }
                 return `
       <div class="row h-75 mt-3">
-        <div class="col-6 align-self-center text-center"><h4>Choose the tenants you would like to manage in your workspace.</h4></div>
+        <div class="col-6 align-self-center text-center">
+          <div class="row">
+              <div class="col-12 align-self-center text-center"><h4>Choose the tenants you would like to manage in your workspace.</h4></div>
+          </div>
+          <div class="row">
+              <div class="col-12 align-self-center text-center"><h5 class="text-muted">Optionally, name this saved configuration.</h5></div>
+              <div class="offset-3 col-6">
+              <div class="input-group mb-3">
+                <div class="input-group-prepend">
+                  <span class="input-group-text" id="basic-addon1">&nbsp;</span>
+                </div>
+                <input type="text" id="providerName" class="form-control" value="Astra Streaming" aria-label="providerName" aria-describedby="basic-addon1">
+              </div>
+            </div>
+          </div>
+        </div>
         <div class="col-5 offset-1" style="overflow-y: auto;">
           <div class="card h-100">
             <div class="card-header">
@@ -114,7 +134,7 @@ class Settings {
       </div>
       <div class="row h-25 align-items-center">
         <div class="offset-3 col-3">
-            <button class="btn btn-primary btn-lg" onclick='sendMsg("${SaveProviderMessageCommand.saveConfigOverride}",buildClusterTenants())'>Save Configuration</button>
+            <button class="btn btn-primary btn-lg" onclick='sendMsg("${SaveProviderMessageCommand.setConfigName}",document.getElementById("providerName").value); sendMsg("${SaveProviderMessageCommand.saveConfigOverride}",buildClusterTenants())'>Save Configuration</button>
           </div>
         <div class="col-2">
             <button class="btn btn-secondary btn-lg" onclick='sendMsg("${SaveProviderMessageCommand.cancel}","")'>Cancel</button>
@@ -124,7 +144,7 @@ class Settings {
             }
             async saveConfig(clusterTenants) {
                 const providerTypeName = `datastax-astra-streaming`;
-                const clusterConfigBuilder = new clusterConfigBuilder_1.ClusterConfigBuilder(providerTypeName);
+                const clusterConfigBuilder = new clusterConfigBuilder_1.ClusterConfigBuilder(providerTypeName, this.configName);
                 if (!clusterTenants || clusterTenants.length === 0) {
                     throw new Error('Choose at least one tenant');
                 }
@@ -180,6 +200,7 @@ var SaveProviderMessageCommand;
     SaveProviderMessageCommand["cancel"] = "cancel";
     SaveProviderMessageCommand["setAstraToken"] = "setAstraToken";
     SaveProviderMessageCommand["saveConfigOverride"] = "saveConfigOverride";
+    SaveProviderMessageCommand["setConfigName"] = "setConfigName";
 })(SaveProviderMessageCommand || (SaveProviderMessageCommand = {}));
 var SaveProviderMessageError;
 (function (SaveProviderMessageError) {

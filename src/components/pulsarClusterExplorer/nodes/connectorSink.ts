@@ -5,13 +5,19 @@ import {ErrorNode} from "./error";
 import * as vscode from "vscode";
 import * as path from "path";
 
-export interface IConnectorSinkNode {
-  readonly label: string;
+export interface IConnectorSinkNode extends vscode.TreeItem {
   readonly pulsarAdmin: TPulsarAdmin;
 }
 
-export class ConnectorSinkNode implements IConnectorSinkNode {
-  constructor(readonly pulsarAdmin: TPulsarAdmin, public readonly label: string) {}
+export class ConnectorSinkNode extends vscode.TreeItem implements IConnectorSinkNode {
+  constructor(readonly pulsarAdmin: TPulsarAdmin, public readonly label: string) {
+    super(label, vscode.TreeItemCollapsibleState.None);
+    this.contextValue = CONTEXT_VALUES.sink;
+    this.iconPath = {
+      light: path.join(__dirname, '..', 'images', 'light', 'connector.svg'),
+      dark: path.join(__dirname, '..', 'images', 'dark', 'connector.svg'),
+    };
+  }
 }
 
 export class ConnectorSinkTree {
@@ -34,16 +40,5 @@ export class ConnectorSinkTree {
     }catch (err) {
       return [new ErrorNode(err)];
     }
-  }
-
-  static getTreeItem(connectorSinkNode: IConnectorSinkNode): vscode.TreeItem {
-    const treeItem = new vscode.TreeItem(connectorSinkNode.label, vscode.TreeItemCollapsibleState.None);
-    treeItem.contextValue = CONTEXT_VALUES.sink;
-    treeItem.iconPath = {
-      light: path.join(__dirname, '..', 'images', 'light', 'connector.svg'),
-      dark: path.join(__dirname, '..', 'images', 'dark', 'connector.svg'),
-    };
-
-    return treeItem;
   }
 }

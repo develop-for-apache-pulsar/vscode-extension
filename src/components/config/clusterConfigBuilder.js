@@ -4,14 +4,14 @@ exports.ClusterConfigBuilder = void 0;
 const config = require("./config");
 const uuid = require("uuid");
 class ClusterConfigBuilder {
-    constructor(providerTypeName) {
+    constructor(providerTypeName, displayName) {
         if (!providerTypeName) {
             throw new Error("Provider type is required to save cluster configuration");
         }
         this.providerConfig = new class {
             constructor() {
                 this.clusters = [];
-                this.name = "";
+                this.name = displayName;
                 this.providerId = uuid.v4();
                 this.providerTypeName = providerTypeName;
             }

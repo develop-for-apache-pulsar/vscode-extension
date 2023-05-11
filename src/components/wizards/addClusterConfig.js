@@ -21,7 +21,7 @@ class AddClusterConfigWizard extends wizard_1.Wizard {
         this.clusterTenantSeparator = "|||";
         this.receivedMessageCallback = this.receivedMessage;
         this.clusterConfigBuilder = {};
-        this.tempCreds = { webServiceUrl: "", pulsarToken: "", providerTypeName: "" };
+        this.tempCreds = { configName: "", webServiceUrl: "", pulsarToken: "", providerTypeName: "" };
     }
     static startWizard(context, providerRegistry) {
         const wizard = new AddClusterConfigWizard(context, providerRegistry);
@@ -57,8 +57,11 @@ class AddClusterConfigWizard extends wizard_1.Wizard {
     set pulsarToken(pulsarToken) {
         this.tempCreds.pulsarToken = pulsarToken;
     }
+    set configName(configName) {
+        this.tempCreds.configName = configName;
+    }
     async saveConfig(clusterTenants) {
-        this.clusterConfigBuilder = new clusterConfigBuilder_1.ClusterConfigBuilder(this.tempCreds.providerTypeName);
+        this.clusterConfigBuilder = new clusterConfigBuilder_1.ClusterConfigBuilder(this.tempCreds.providerTypeName, this.tempCreds.configName);
         if (!clusterTenants || clusterTenants.length === 0) {
             throw new Error('Choose at least one tenant');
         }
@@ -113,7 +116,7 @@ class AddClusterConfigWizard extends wizard_1.Wizard {
         let providerTypesStr = "";
         this.providerRegistry.allProviderInfo.forEach((providerInfo) => {
             providerTypesStr += `<div class="col-12"><div class="row"><div class="offset-3 col-2">
-                  <button class="btn btn-lg btn-primary" onclick='sendMsg("${MessageCommand.setProviderType}","${providerInfo.typeName}")'>${providerInfo.displayName}</button>
+                  <button style="width: 100%;" class="btn btn-lg btn-primary pt-2 pb-2" onclick='sendMsg("${MessageCommand.setProviderType}","${providerInfo.typeName}")'>${providerInfo.displayName}</button>
               </div>
             <div class="col-5 text-muted">${providerInfo.description}</div></div></div>`;
         });

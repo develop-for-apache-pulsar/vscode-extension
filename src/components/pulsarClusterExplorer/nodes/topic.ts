@@ -1,17 +1,26 @@
 import * as vscode from "vscode";
 import { TPulsarAdmin } from "../../../types/TPulsarAdmin";
-import {CONTEXT_VALUES, MessageTypes, AllPulsarAdminExplorerNodeTypes, TBaseNode, TBaseNodeWithPulsarAdmin} from "./types";
+import {CONTEXT_VALUES, MessageTypes, AllPulsarAdminExplorerNodeTypes} from "./types";
 import {MessageNode} from "./message";
 import {ErrorNode} from "./error";
 import * as path from "path";
 import {TTopic} from "../../../types/TTopic";
 
-export interface ITopicNode extends TBaseNodeWithPulsarAdmin {
+export interface ITopicNode extends vscode.TreeItem {
   readonly topicData: TTopic;
+  readonly pulsarAdmin: TPulsarAdmin;
 }
 
-export class TopicNode implements ITopicNode {
-  constructor(readonly pulsarAdmin: TPulsarAdmin, public readonly label: string, public readonly topicData: TTopic) {}
+export class TopicNode extends vscode.TreeItem implements ITopicNode {
+  constructor(readonly pulsarAdmin: TPulsarAdmin, public readonly label: string, public readonly topicData: TTopic) {
+    super(label, vscode.TreeItemCollapsibleState.None);
+    this.contextValue = CONTEXT_VALUES.topic;
+    this.description = topicData.Type;
+    this.iconPath = {
+      light: path.join(__dirname, '..', 'images', 'light', 'topic.svg'),
+      dark: path.join(__dirname, '..', 'images', 'dark', 'topic.svg'),
+    };
+  }
 }
 
 export class TopicTree {
@@ -34,17 +43,5 @@ export class TopicTree {
     }catch (err) {
       return [new ErrorNode(err)];
     }
-  }
-
-  static getTreeItem(topicNode: ITopicNode): vscode.TreeItem {
-    const treeItem = new vscode.TreeItem(topicNode.topicData.Name, vscode.TreeItemCollapsibleState.None);
-    treeItem.contextValue = CONTEXT_VALUES.topic;
-    treeItem.description = topicNode.topicData.Type;
-    treeItem.iconPath = {
-      light: path.join(__dirname, '..', 'images', 'light', 'topic.svg'),
-      dark: path.join(__dirname, '..', 'images', 'dark', 'topic.svg'),
-    };
-
-    return treeItem;
   }
 }

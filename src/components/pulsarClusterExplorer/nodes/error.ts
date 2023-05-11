@@ -1,28 +1,19 @@
-import {CONTEXT_VALUES, TBaseNode} from "./types";
+import {CONTEXT_VALUES} from "./types";
 import * as vscode from "vscode";
 
-export interface IErrorNode extends TBaseNode {
-  readonly errorText: string;
+export interface IErrorNode extends vscode.TreeItem {
+  readonly errorObj: any;
 }
 
-export class ErrorNode implements IErrorNode {
-  constructor(private readonly errorObj: any) {
+export class ErrorNode extends vscode.TreeItem implements IErrorNode {
+  constructor(readonly errorObj: any) {
+    super("", vscode.TreeItemCollapsibleState.None);
+    this.contextValue = CONTEXT_VALUES.error;
+
     if(errorObj.response && errorObj.response.data) {
-      this.errorText = errorObj.response.data.message;
+      this.label = errorObj.response.data.message;
     }
 
-    this.errorText += " ("+errorObj.message+")";
-  }
-
-  readonly errorText: string = '';
-  readonly label: string = '';
-}
-
-export class ErrorTree {
-  static getTreeItem(errorNode: IErrorNode): vscode.TreeItem {
-    const treeItem = new vscode.TreeItem(errorNode.errorText, vscode.TreeItemCollapsibleState.None);
-    treeItem.contextValue = CONTEXT_VALUES.error;
-
-    return treeItem;
+    this.label += " ("+errorObj.message+")";
   }
 }

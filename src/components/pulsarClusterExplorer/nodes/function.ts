@@ -1,14 +1,21 @@
 import * as vscode from "vscode";
 import { TPulsarAdmin } from "../../../types/TPulsarAdmin";
-import {CONTEXT_VALUES, MessageTypes, AllPulsarAdminExplorerNodeTypes, TBaseNode, TBaseNodeWithPulsarAdmin} from "./types";
+import {CONTEXT_VALUES, MessageTypes, AllPulsarAdminExplorerNodeTypes} from "./types";
 import {MessageNode} from "./message";
 import {ErrorNode} from "./error";
 import * as path from "path";
 
-export interface IFunctionNode extends TBaseNodeWithPulsarAdmin{}
+export interface IFunctionNode extends vscode.TreeItem{}
 
-export class FunctionNode implements IFunctionNode {
-  constructor(readonly pulsarAdmin: TPulsarAdmin, public readonly label: string) {}
+export class FunctionNode extends vscode.TreeItem implements IFunctionNode {
+  constructor(readonly pulsarAdmin: TPulsarAdmin, public readonly label: string) {
+    super(label, vscode.TreeItemCollapsibleState.None);
+    this.contextValue = CONTEXT_VALUES.function;
+    this.iconPath = {
+      light: path.join(__dirname, '..', 'images', 'light', 'function.svg'),
+      dark: path.join(__dirname, '..', 'images', 'dark', 'function.svg'),
+    };
+  }
 }
 
 export class FunctionTree {
@@ -31,16 +38,5 @@ export class FunctionTree {
     }catch (err) {
       return [new ErrorNode(err)];
     }
-  }
-
-  static getTreeItem(functionNode: IFunctionNode): vscode.TreeItem {
-    const treeItem = new vscode.TreeItem(functionNode.label, vscode.TreeItemCollapsibleState.None);
-    treeItem.contextValue = CONTEXT_VALUES.sink;
-    treeItem.iconPath = {
-      light: path.join(__dirname, '..', 'images', 'light', 'function.svg'),
-      dark: path.join(__dirname, '..', 'images', 'dark', 'function.svg'),
-    };
-
-    return treeItem;
   }
 }

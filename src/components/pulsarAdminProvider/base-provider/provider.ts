@@ -1,8 +1,8 @@
 import { TPulsarAdmin } from "../../../types/TPulsarAdmin";
 import {TTopic, TopicType} from "../../../types/TTopic";
 
-import PulsarAdmin from "../../../../../typescript/dist/src/index";
-import {ClusterData} from "../../../../../typescript/dist/gen/models/cluster-data";
+import PulsarAdmin from "@apache-pulsar/pulsar-admin";
+import {ClusterData} from "@apache-pulsar/pulsar-admin/dist/gen/models/cluster-data";
 
 export class BaseProvider implements TPulsarAdmin {
   protected readonly client: PulsarAdmin;

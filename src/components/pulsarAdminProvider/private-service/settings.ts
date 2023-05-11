@@ -6,8 +6,8 @@ export class Settings implements TProviderSettings {
   public typeName = 'private-service';
   public displayName ='Private Service';
   public description = 'A private Pulsar service usually hosted in a private cloud or on-premises. Infrastructures are typically dedicated virtual machines or Kubernetes, using JWT token auth.';
-  public darkIconFileName = 'Pulsar-Logo.svg';
-  public lightIconFileName = 'Pulsar-Logo.svg';
+  public darkIconFileName = 'images/Pulsar-Logo.svg';
+  public lightIconFileName = 'images/Pulsar-Logo.svg';
 
   public saveProviderWizard = class {
     private pulsarAdminProvider: TPulsarAdmin | undefined;

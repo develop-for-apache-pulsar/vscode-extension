@@ -1,5 +1,5 @@
 import {TTopic} from "./TTopic";
-import {ClusterData} from "../../../typescript/dist/gen/models/cluster-data";
+import {ClusterData} from "@apache-pulsar/pulsar-admin/dist/gen/models/cluster-data";
 
 export type TPulsarAdmin = {
   /**

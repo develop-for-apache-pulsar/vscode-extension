@@ -18,19 +18,19 @@ class PulsarAdminProviderTree {
             return []; //must be blank to show welcome message
         }
         return pulsarAdminProviderConfigs.map((providerConfig) => {
-            return new PulsarAdminProviderNode(providerConfig.settings.displayName, providerConfig);
+            return new PulsarAdminProviderNode("", providerConfig);
         });
     }
     static getTreeItem(pulsarAdminProviderNode) {
         const providerTypeName = pulsarAdminProviderNode.providerConfig.config.providerTypeName;
-        const treeItem = new vscode.TreeItem(pulsarAdminProviderNode.label, vscode.TreeItemCollapsibleState.Collapsed);
+        const treeItem = new vscode.TreeItem(pulsarAdminProviderNode.providerConfig.config.name, vscode.TreeItemCollapsibleState.Collapsed);
         treeItem.contextValue = types_1.CONTEXT_VALUES.provider;
         treeItem.tooltip = providerTypeName;
         treeItem.iconPath = {
             light: path.join(__dirname, '..', 'src', 'components', 'pulsarAdminProvider', providerTypeName, pulsarAdminProviderNode.providerConfig.settings.lightIconFileName),
             dark: path.join(__dirname, '..', 'src', 'components', 'pulsarAdminProvider', providerTypeName, pulsarAdminProviderNode.providerConfig.settings.darkIconFileName),
         };
-        treeItem.description = pulsarAdminProviderNode.providerConfig.settings.description;
+        treeItem.description = (pulsarAdminProviderNode.providerConfig.config.name !== pulsarAdminProviderNode.providerConfig.settings.displayName ? pulsarAdminProviderNode.providerConfig.settings.displayName : undefined);
         return treeItem;
     }
 }

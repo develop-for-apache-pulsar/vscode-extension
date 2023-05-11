@@ -1,4 +1,4 @@
-
+.npmrc
 .idea/
 .vscode-test/
 *.vsix

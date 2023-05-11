@@ -6,8 +6,8 @@ export class Settings implements TProviderSettings {
   public typeName = 'standalone';
   public displayName ='Standalone';
   public description = 'A Pulsar cluster running in standalone mode on your desktop. This is a single instance of Pulsar running in a single JVM process with no token auth.';
-  public darkIconFileName = 'Pulsar-Logo.svg';
-  public lightIconFileName = 'Pulsar-Logo.svg';
+  public darkIconFileName = 'images/Pulsar-Logo.svg';
+  public lightIconFileName = 'images/Pulsar-Logo.svg';
 
   public saveProviderWizard = class {
     private pulsarAdminProvider: TPulsarAdmin | undefined;

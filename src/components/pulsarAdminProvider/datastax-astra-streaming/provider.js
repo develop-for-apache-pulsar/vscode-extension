@@ -7,6 +7,9 @@ class Provider extends provider_1.BaseProvider {
         if (webServiceUrl === null || webServiceUrl === undefined) {
             throw new Error("Web service url is required");
         }
+        if (pulsarToken === null || pulsarToken === undefined) {
+            throw new Error("Pulsar token is required");
+        }
         super(webServiceUrl, pulsarToken);
     }
 }

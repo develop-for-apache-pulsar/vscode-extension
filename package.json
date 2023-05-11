@@ -3,6 +3,7 @@
   "displayName": "Apache Pulsar Admin",
   "description": "Manage your apache pulsar clusters",
   "version": "0.1.0-alpha.0",
+  "publisher": "apache-pulsar",
   "engines": {
     "vscode": "^1.77.0"
   },
@@ -58,7 +59,8 @@
     "ts-loader": "^9.4.2",
     "typescript": "^5.0.4",
     "webpack": "^5.81.0",
-    "webpack-cli": "^5.0.2"
+    "webpack-cli": "^5.0.2",
+    "@apache-pulsar/pulsar-admin": "^2.11.1-alpha.1"
   },
   "contributes": {
     "configuration": {
@@ -142,11 +144,6 @@
         {
           "command": "extension.vsPulsarAdminRemoveClusterConfig",
           "when": "view == extension.vsPulsarClusterExplorer && viewItem == vsPulsarAdmin.provider",
-          "group": "0@1"
-        },
-        {
-          "command": "extension.vsPulsarAdminViewTopicDetails",
-          "when": "view == extension.vsPulsarClusterExplorer && viewItem == vsPulsarAdmin.topic",
           "group": "0@1"
         }
       ]

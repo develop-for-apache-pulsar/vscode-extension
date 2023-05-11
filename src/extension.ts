@@ -18,7 +18,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 	const providerRegistry = new PulsarAdminProviders();
 
 	console.debug('Building tree provider');
-	const pulsarClusterTreeProvider = new PulsarAdminExplorerTree(host, providerRegistry);
+	const pulsarClusterTreeProvider = new PulsarAdminExplorerTree(host, providerRegistry, context);
 
 	console.debug('Building subscriptions');
 	const subscriptions = [

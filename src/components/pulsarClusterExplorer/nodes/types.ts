@@ -10,6 +10,7 @@ import { IMessageNode } from "./message";
 import {IErrorNode} from "./error";
 import {TPulsarAdmin} from "../../../types/TPulsarAdmin";
 import {IClusterNode} from "./cluster";
+import * as vscode from "vscode";
 
 export enum MessageTypes {
   noTenants,
@@ -30,17 +31,8 @@ export enum FolderTypes {
   functionFolder,
 }
 
-export type TBaseNode = {
-  readonly label: string;
-};
-
-export type TBaseNodeWithPulsarAdmin = {
-  readonly label: string;
-  readonly pulsarAdmin: TPulsarAdmin;
-};
-
 export type AllPulsarAdminExplorerNodeTypes =
-  IPulsarAdminProviderNode
+  | IPulsarAdminProviderNode
   | IClusterNode
   | IMessageNode
   | IErrorNode
@@ -69,4 +61,5 @@ export const CONTEXT_VALUES = {
   source: 'vsPulsarAdmin.source',
   sink: 'vsPulsarAdmin.sink',
   function: 'vsPulsarAdmin.function',
+  folder:  'vsPulsarAdmin.folder',
 };

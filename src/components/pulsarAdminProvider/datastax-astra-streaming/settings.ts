@@ -8,8 +8,8 @@ export class Settings implements TProviderSettings {
   public typeName = 'datastax-astra-streaming';
   public displayName = 'Astra Streaming';
   public description = 'A tenant hosted on DataStax Astra Streaming, using JWT token auth. Note: you\'ll need your Astra token to complete this wizard.';
-  public darkIconFileName = 'ds-black_300.png';
-  public lightIconFileName = 'ds-white_300.png';
+  public darkIconFileName = 'images/dark/ds-black_300.png';
+  public lightIconFileName = 'images/light/ds-white_300.png';
 
   public saveProviderWizard = class {
     private clusterTenantSeparator: string = "|||";

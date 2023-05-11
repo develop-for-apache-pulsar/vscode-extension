@@ -2,19 +2,19 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.BaseProvider = void 0;
 const TTopic_1 = require("../../../types/TTopic");
-const index_1 = require("../../../../../typescript/dist/src/index");
+const pulsar_admin_1 = require("@apache-pulsar/pulsar-admin");
 class BaseProvider {
     constructor(webServiceUrl, pulsarToken) {
         if (webServiceUrl === null || webServiceUrl === undefined) {
             throw new Error("Web service url is required");
         }
         if (pulsarToken === undefined) {
-            this.client = index_1.default.builder()
+            this.client = pulsar_admin_1.default.builder()
                 .serviceHttpUrl(webServiceUrl)
                 .build();
         }
         else {
-            this.client = index_1.default.builder()
+            this.client = pulsar_admin_1.default.builder()
                 .serviceHttpUrl(webServiceUrl)
                 .tokenAuthentication(pulsarToken)
                 .build();
@@ -30,9 +30,12 @@ class BaseProvider {
                 reject(response);
             }).catch((err) => {
                 if (this.shouldRejectError(err)) {
+                    console.debug("Request rejected");
+                    console.error(err);
                     reject(err);
                     return;
                 }
+                console.debug("Request not rejected, returning default value");
                 resolve(def);
             });
         });

@@ -5,19 +5,23 @@ import {ErrorNode} from "./error";
 import * as vscode from "vscode";
 import * as path from "path";
 
-export interface IConnectorSourceNode {
-  readonly label: string;
+export interface IConnectorSourceNode extends vscode.TreeItem {
   readonly pulsarAdmin: TPulsarAdmin;
 }
 
-export class ConnectorSourceNode implements IConnectorSourceNode {
+export class ConnectorSourceNode extends vscode.TreeItem  implements IConnectorSourceNode {
   constructor(readonly pulsarAdmin: TPulsarAdmin, public readonly label: string) {
+    super(label, vscode.TreeItemCollapsibleState.None);
+    this.contextValue = CONTEXT_VALUES.source;
+    this.iconPath = {
+      light: path.join(__dirname, '..', 'images', 'light', 'connector.svg'),
+      dark: path.join(__dirname, '..', 'images', 'dark', 'connector.svg'),
+    };
   }
 }
 
 export class ConnectorSourceTree {
-  constructor(private readonly pulsarAdmin: TPulsarAdmin) {
-  }
+  constructor(private readonly pulsarAdmin: TPulsarAdmin) {}
 
   async getChildren(tenantName: string, namespaceName: string): Promise<AllPulsarAdminExplorerNodeTypes[]> {
     try{
@@ -35,16 +39,5 @@ export class ConnectorSourceTree {
     }catch (err) {
       return [new ErrorNode(err)];
     }
-  }
-
-  static getTreeItem(connectorSourceNode: IConnectorSourceNode): vscode.TreeItem {
-    const treeItem = new vscode.TreeItem(connectorSourceNode.label, vscode.TreeItemCollapsibleState.None);
-    treeItem.contextValue = CONTEXT_VALUES.source;
-    treeItem.iconPath = {
-      light: path.join(__dirname, '..', 'images', 'light', 'connector.svg'),
-      dark: path.join(__dirname, '..', 'images', 'dark', 'connector.svg'),
-    };
-
-    return treeItem;
   }
 }
