@@ -1,9 +1,11 @@
 export type TTopic = {
-  Name: string;
-  Type: TopicType;
+  name: string;
+  type: TopicType;
+  tenantName: string;
+  namespaceName: string;
 };
 
 export enum TopicType {
-  Persistent = 'Persistent',
-  NonPersistent = 'NonPersistent',
+  persistent = 'Persistent',
+  nonPersistent = 'NonPersistent',
 }

@@ -29,7 +29,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 		registerCommand('extension.vsPulsarAdminRemoveClusterConfig', (explorerNode: PulsarAdminProviderNode) => PulsarAdminConfigCommands.removeSavedConfig(host, explorerNode, context)),
 		registerCommand('extension.vsPulsarAdminRefreshExplorer', () => PulsarAdminTreeCommands.refreshTreeProvider(pulsarClusterTreeProvider, context)),
 		registerCommand('extension.vsPulsarAdminAddClusterConfig', () => PulsarAdminConfigCommands.showAddClusterConfigWizard(needsActivationDebouncing, context, providerRegistry)),
-		registerCommand('extension.vsPulsarAdminViewTopicDetails', (explorerNode) => PulsarAdminTreeCommands.viewTopicDetails(explorerNode, context)),
+		registerCommand('extension.vsPulsarAdminWatchTopicMessages', (topicExplorerNode) => PulsarAdminTreeCommands.watchTopicMessages(topicExplorerNode, context)),
 	];
 
 	console.debug('Registering commands');

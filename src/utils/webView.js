@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Wizard = void 0;
 const vscode = require("vscode");
-class Wizard {
+class WebView {
     constructor(context, wizardId, displayTitle, takeFocus = true) {
         this.wizardId = wizardId;
         this.displayTitle = displayTitle;
@@ -84,5 +84,5 @@ class Wizard {
     `;
     }
 }
-exports.Wizard = Wizard;
+exports.Wizard = WebView;
 //# sourceMappingURL=wizard.js.map

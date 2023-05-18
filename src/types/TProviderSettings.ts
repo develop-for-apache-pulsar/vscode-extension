@@ -1,4 +1,4 @@
-import {Wizard} from "../utils/wizard";
+import {WebView} from "../utils/webView";
 
 export type TProviderSettings = {
   typeName: string;
@@ -7,7 +7,7 @@ export type TProviderSettings = {
   darkIconFileName: string;
   lightIconFileName: string;
   saveProviderWizard: {
-    new(wizard: Wizard): {
+    new(wizard: WebView): {
       startWizard(): string;
       receivedMessage(message: any): Promise<void>;
     };

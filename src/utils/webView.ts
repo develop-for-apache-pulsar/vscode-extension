@@ -1,14 +1,15 @@
 import * as vscode from "vscode";
-import {Uri} from "vscode";
+import {TWizardMessage} from "../types/TWizardMessage";
 
-export class Wizard{
+export class WebView {
   private webPanel: vscode.WebviewPanel | undefined = undefined;
-  private _receivedMessageCallback: Function = (message: IWizardMessage) => {};
-  private _stateChangeCallback: Function = (e: vscode.WebviewPanelOnDidChangeViewStateEvent) => {};
-  private extensionUri: Uri;
+  private _receivedMessageCallback: Function = () => {};
+  private _stateChangeCallback: Function = () => {};
+  private _didDisposeCallback: Function = () => {};
+  private extensionUri: vscode.Uri;
 
   constructor(context: vscode.ExtensionContext,
-              readonly wizardId: string,
+              readonly viewId: string,
               readonly displayTitle: string,
               takeFocus: boolean = true){
     this.extensionUri = context.extensionUri;
@@ -18,9 +19,8 @@ export class Wizard{
       return;
     }
 
-
     this.webPanel = vscode.window.createWebviewPanel(
-      wizardId,
+      viewId,
       displayTitle,
       {
         viewColumn: vscode.ViewColumn.One,
@@ -39,11 +39,9 @@ export class Wizard{
       }
     );
 
-    this.webPanel.onDidDispose(() => {
-        this.webPanel = undefined;
-      },
+    this.webPanel.onDidDispose(() => { this._didDisposeCallback(); this.webPanel?.dispose(); },
       undefined,
-      context.subscriptions
+      context.subscriptions,
     );
 
     this.webPanel.onDidChangeViewState(
@@ -53,7 +51,7 @@ export class Wizard{
     );
 
     this.webPanel.webview.onDidReceiveMessage(
-      (message: IWizardMessage) => { this._receivedMessageCallback(message); },
+      (message: TWizardMessage) => { this._receivedMessageCallback(message); },
       undefined,
       context.subscriptions
     );
@@ -67,11 +65,11 @@ export class Wizard{
     this._stateChangeCallback = callback;
   }
 
-  public dispose(): void {
-    this.webPanel?.dispose();
+  set didDisposeCallback(callback: any){
+    this._didDisposeCallback = callback;
   }
 
-  public postMessage(command: string, text: string): Thenable<boolean> {
+  public postMessage(command: string, text: string | undefined = undefined): Thenable<boolean> {
     return this.webPanel!.webview.postMessage({ command: command, text: text, isError: false });
   }
 
@@ -115,10 +113,4 @@ export class Wizard{
       </html>
     `;
   }
-}
-
-export interface IWizardMessage {
-  command: string;
-  text: string | string[];
-  isError: boolean;
 }

@@ -41,6 +41,7 @@
     "uuid": "^9.0.0"
   },
   "devDependencies": {
+    "@apache-pulsar/pulsar-admin": "^2.11.1-alpha.1",
     "@types/glob": "^8.1.0",
     "@types/mocha": "^10.0.1",
     "@types/node": "16.x",
@@ -55,12 +56,13 @@
     "file-loader": "^6.2.0",
     "glob": "^8.1.0",
     "mocha": "^10.2.0",
+    "pulsar-client": "^1.8.2",
     "style-loader": "^3.3.2",
     "ts-loader": "^9.4.2",
     "typescript": "^5.0.4",
     "webpack": "^5.81.0",
     "webpack-cli": "^5.0.2",
-    "@apache-pulsar/pulsar-admin": "^2.11.1-alpha.1"
+    "workerpool": "^6.4.0"
   },
   "contributes": {
     "configuration": {
@@ -145,6 +147,11 @@
           "command": "extension.vsPulsarAdminRemoveClusterConfig",
           "when": "view == extension.vsPulsarClusterExplorer && viewItem == vsPulsarAdmin.provider",
           "group": "0@1"
+        },
+        {
+          "command": "extension.vsPulsarAdminWatchTopicMessages",
+          "when": "view == extension.vsPulsarClusterExplorer && viewItem == vsPulsarAdmin.topic",
+          "group": "0@1"
         }
       ]
     },
@@ -167,8 +174,8 @@
         "category": "PulsarAdmin"
       },
       {
-        "command": "extension.vsPulsarAdminViewTopicDetails",
-        "title": "Details",
+        "command": "extension.vsPulsarAdminWatchTopicMessages",
+        "title": "Watch",
         "category": "PulsarAdmin"
       }
     ]

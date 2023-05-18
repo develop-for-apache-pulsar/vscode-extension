@@ -1,9 +1,10 @@
 import * as vscode from "vscode";
-import {IWizardMessage, Wizard} from "../../utils/wizard";
+import {WebView} from "../../utils/webView";
 import {ClusterConfigBuilder} from "../config/clusterConfigBuilder";
 import {TPulsarAdmin} from "../../types/TPulsarAdmin";
 import {PulsarAdminProviders, TProviderInfo} from "../pulsarAdminProvider";
 import {TPulsarAdminProviderCluster} from "../../types/TPulsarAdminProviderCluster";
+import {TWizardMessage} from "../../types/TWizardMessage";
 
 enum MessageCommand {
   loaded = 'loaded',
@@ -16,7 +17,7 @@ enum MessageError {
   noTenantsSelected = 'noTenantsSelected',
 }
 
-export class AddClusterConfigWizard extends Wizard {
+export class AddClusterConfigWizard extends WebView {
   private clusterConfigBuilder: ClusterConfigBuilder;
   private tempCreds: { configName: string, webServiceUrl: string, pulsarToken: string, providerTypeName: string };
   private clusterTenantSeparator: string = "|||";
@@ -39,7 +40,7 @@ export class AddClusterConfigWizard extends Wizard {
     this.showPage(this.chooseProviderTypePage());
   }
 
-  private async receivedMessage(message: IWizardMessage): Promise<void> {
+  private async receivedMessage(message: TWizardMessage): Promise<void> {
     switch (message.command) {
       case MessageCommand.loaded:
         // no op

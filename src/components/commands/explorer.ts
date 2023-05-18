@@ -1,7 +1,8 @@
 import * as vscode from "vscode";
 import {PulsarAdminExplorerTree} from "../pulsarClusterExplorer/explorer";
 import {AllPulsarAdminExplorerNodeTypes} from "../pulsarClusterExplorer/nodes/types";
-import {TopicNode} from "../pulsarClusterExplorer/nodes/topic";
+import {ITopicNode, TopicNode} from "../pulsarClusterExplorer/nodes/topic";
+import {WatchConfig, WatchTopic} from "../views/watchTopic";
 
 export class PulsarAdminTreeCommands{
   public static refreshTreeProvider(treeProvider: PulsarAdminExplorerTree, context: vscode.ExtensionContext): void {
@@ -12,10 +13,11 @@ export class PulsarAdminTreeCommands{
     treeProvider.initialize();
   }
 
-  static viewTopicDetails(explorerNode: AllPulsarAdminExplorerNodeTypes, context: vscode.ExtensionContext) {
-    // This should be a topic node
-    if(typeof explorerNode !== typeof TopicNode) {
-      return;
-    }
+  public static watchTopicMessages(topicExplorerNode: ITopicNode, context: vscode.ExtensionContext): void {
+    const watchTopicView = new WatchTopic(context,
+      topicExplorerNode.topicData,
+      topicExplorerNode.pulsarAdmin);
+
+    watchTopicView.showPage();
   }
 }

@@ -87,8 +87,10 @@ export class BaseProvider implements TPulsarAdmin {
       this.QueryPulsarAdminClient<string[]>(this.client.namespaces().getTopics(tenantName, namespaceName), []).then((topics: string[]) => {
         const topicData = topics.map((topic: string) => {
           return new class implements TTopic {
-            Name = topic.split('//')[1].split('/').pop()!;
-            Type = TopicType.Persistent;
+            name = topic.split('//')[1].split('/').pop()!;
+            type = TopicType.persistent;
+            tenantName = tenantName;
+            namespaceName = namespaceName;
           };
         });
 
