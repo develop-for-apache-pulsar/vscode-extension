@@ -4,3 +4,5 @@
 *.vsix
 node_modules/
 dist/
+
+out/

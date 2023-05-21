@@ -24,8 +24,8 @@ class Wizard {
             enableFindWidget: false,
             enableForms: false,
             localResourceRoots: [
-                vscode.Uri.joinPath(context.extensionUri, 'media', 'js'),
-                vscode.Uri.joinPath(context.extensionUri, 'media', 'css'),
+                vscode.Uri.joinPath(context.extensionUri, 'scripts'),
+                vscode.Uri.joinPath(context.extensionUri, 'styles'),
             ]
         });
         this.webPanel.onDidDispose(() => {
@@ -53,9 +53,9 @@ class Wizard {
         this.webPanel.webview.html = this.buildWebview(html);
     }
     buildWebview(content) {
-        const scriptPathOnDisk = vscode.Uri.joinPath(this.extensionUri, 'media', 'js', 'script.js');
+        const scriptPathOnDisk = vscode.Uri.joinPath(this.extensionUri, 'scripts', 'script.js');
         const scriptUri = this.webPanel?.webview.asWebviewUri(scriptPathOnDisk);
-        const stylePath = vscode.Uri.joinPath(this.extensionUri, 'media', 'css', 'bootstrap.min.css');
+        const stylePath = vscode.Uri.joinPath(this.extensionUri, 'styles', 'bootstrap.min.css');
         const stylesUri = this.webPanel?.webview.asWebviewUri(stylePath);
         return `
       <!DOCTYPE html>
@@ -85,4 +85,3 @@ class Wizard {
     }
 }
 exports.Wizard = Wizard;
-//# sourceMappingURL=wizard.js.map

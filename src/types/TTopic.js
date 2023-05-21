@@ -6,4 +6,3 @@ var TopicType;
     TopicType["Persistent"] = "Persistent";
     TopicType["NonPersistent"] = "NonPersistent";
 })(TopicType = exports.TopicType || (exports.TopicType = {}));
-//# sourceMappingURL=TTopic.js.map
