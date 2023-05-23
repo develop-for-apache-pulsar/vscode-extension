@@ -70,6 +70,18 @@
     "webpack-cli": "^5.0.2"
   },
   "contributes": {
+    "customEditors": [
+      {
+        "viewType": "extension.topicMessageView",
+        "displayName": "Topic Messages",
+        "selector": [
+          {
+            "filenamePattern": "*.pulsar"
+          }
+        ],
+        "priority": "default"
+      }
+    ],
     "languages": [
       {
         "id": "pulsar",
