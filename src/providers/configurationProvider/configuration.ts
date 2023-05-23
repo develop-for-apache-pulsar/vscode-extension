@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import {TSavedProviderConfig} from "../../types/tSavedProviderConfig";
-import {CLUSTER_CONFIGS_KEY, EXTENSION_CONFIG_KEY} from "../../common/constants";
+import {PROVIDER_CONFIGS_KEY, EXTENSION_CONFIG_KEY} from "../../common/constants";
 
 type ConfigUpdater<T> = (configKey: string, value: T, scope: vscode.ConfigurationTarget, valueAtScope: any, createIfNotExist: boolean) => Promise<void>;
 
@@ -79,20 +79,20 @@ export default class ConfigurationProvider {
   }
 
   public static getClusterConfigs(): TSavedProviderConfig[] {
-    const savedConfigs = vscode.workspace.getConfiguration(EXTENSION_CONFIG_KEY)[CLUSTER_CONFIGS_KEY];
+    const savedConfigs = vscode.workspace.getConfiguration(EXTENSION_CONFIG_KEY)[PROVIDER_CONFIGS_KEY];
     return !savedConfigs || !savedConfigs.length ? [] : savedConfigs as TSavedProviderConfig[];
   }
 
  public static async addClusterConfig(clusterConfiguration: TSavedProviderConfig) {
-    await this.addValueToConfigArray(CLUSTER_CONFIGS_KEY, clusterConfiguration);
+    await this.addValueToConfigArray(PROVIDER_CONFIGS_KEY, clusterConfiguration);
   }
 
   public static async removeClusterConfig(clusterConfiguration: TSavedProviderConfig) {
-    const removeIdx = vscode.workspace.getConfiguration(EXTENSION_CONFIG_KEY)[CLUSTER_CONFIGS_KEY].findIndex((config: TSavedProviderConfig) => {
+    const removeIdx = vscode.workspace.getConfiguration(EXTENSION_CONFIG_KEY)[PROVIDER_CONFIGS_KEY].findIndex((config: TSavedProviderConfig) => {
       return config === clusterConfiguration;
     });
 
-    await this.removeValueFromConfigArray(CLUSTER_CONFIGS_KEY, removeIdx);
+    await this.removeValueFromConfigArray(PROVIDER_CONFIGS_KEY, removeIdx);
   }
 
   public affectsUs(change: vscode.ConfigurationChangeEvent) {

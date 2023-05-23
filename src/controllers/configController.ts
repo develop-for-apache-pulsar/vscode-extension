@@ -8,8 +8,7 @@ import {trace} from "../utils/traceDecorator";
 
 export class ConfigController {
   @trace('Show Add Cluster Config Wizard')
-  public static async showAddClusterConfigWizard(providerRegistry: PulsarAdminProviders) {
-    const context = (global as any).extensionContext as vscode.ExtensionContext;
+  public static async showAddClusterConfigWizard(providerRegistry: PulsarAdminProviders, context: vscode.ExtensionContext): Promise<void> {
     await AddClusterConfigWizard.startWizard(context, providerRegistry);
   }
 
