@@ -7,6 +7,7 @@ import {ConfigController} from "./controllers/configController";
 import {PulsarAdminProviders} from "./pulsarAdminProviders";
 import * as Constants from "./common/constants";
 import Telemetry from "./utils/telemetry";
+import TopicMessageController from "./controllers/topicMessageController";
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -26,6 +27,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 		registerCommand(Constants.COMMAND_REMOVE_CLUSTER_CONFIG, ConfigController.removeSavedConfig),
 		registerCommand(Constants.COMMAND_REFRESH_EXPLORER, () => TreeExplorerController.refreshTreeProvider(pulsarClusterTreeProvider)),
 		registerCommand(Constants.COMMAND_ADD_CLUSTER_CONFIG, () => ConfigController.showAddClusterConfigWizard(providerRegistry, context)),
+		registerTextEditorProvider(Constants.TOPIC_MESSAGE_CUSTOM_EDITOR_VIEW_TYPE, TopicMessageController.createTopicMessageEditorProvider(context)),
+
 		Telemetry.initialize(),
 	];
 
@@ -39,7 +42,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 // This method is called when your extension is deactivated
 export function deactivate(): void  {}
 
-
 function registerCommand(command: string, callback: (...args: any[]) => any): vscode.Disposable {
 	return vscode.commands.registerCommand(command, (...args: any[]) => { try{ callback(...args); }catch(e: any){ Telemetry.sendError(e); throw e; } });
+}
+
+function registerTextEditorProvider(viewType: string, provider: vscode.CustomTextEditorProvider): vscode.Disposable {
+	return vscode.window.registerCustomEditorProvider(viewType, provider);
 }

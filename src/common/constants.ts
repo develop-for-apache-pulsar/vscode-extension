@@ -16,6 +16,9 @@ export const COMMAND_REMOVE_CLUSTER_CONFIG = 'extension.vsDevelopPulsarRemoveClu
 
 // PROVIDERS
 export const PROVIDER_CLUSTER_TREE = 'extension.vsPulsarClusterExplorer';
+export const TOPIC_MESSAGE_CUSTOM_EDITOR_VIEW_TYPE = 'extension.topicMessageView';
+
+
 export const CONTEXT_VALUES = {
   error: 'vsDevelopPulsar.error',
   message: 'vsDevelopPulsar.message',
