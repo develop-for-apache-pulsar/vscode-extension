@@ -79,32 +79,14 @@
           "title": "Additional settings",
           "description": "Saved cluster configurations",
           "properties": {
-            "vs-delevopforpulsar.clusterConfigs": {
+            "providerConfigs": {
               "type": "array",
               "title": "Pulsar Clusters",
               "description": "Pulsar admin clusters",
               "default": [],
               "items": {
                 "type": "object",
-                "title": "cluster",
-                "properties": {
-                  "webServiceUrl": {
-                    "type": "string",
-                    "description": "The cluster web service url. Required."
-                  },
-                  "pulsarToken": {
-                    "type": "string",
-                    "description": "The pulsar token used for authentications. Optional."
-                  },
-                  "pulsarVersion": {
-                    "type": "string",
-                    "description": "The version of pulsar"
-                  },
-                  "clusterProviderTypeName": {
-                    "type": "string",
-                    "description": "The provider type"
-                  }
-                }
+                "title": "cluster"
               }
             }
           }

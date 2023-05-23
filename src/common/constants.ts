@@ -3,7 +3,7 @@ export const TELEM_KEY: string = 'd398a2a9-a129-4d5d-b6e9-3a47d5a146a1';
 
 // CONFIG
 export const EXTENSION_CONFIG_KEY = "vs-delevopforpulsar";
-export const CLUSTER_CONFIGS_KEY = "vs-delevopforpulsar.clusterConfigs";
+export const PROVIDER_CONFIGS_KEY = "providerConfigs";
 
 // COMMANDS
 export const COMMAND_REFRESH_EXPLORER = 'extension.vsDevelopPulsarRefreshExplorer';
