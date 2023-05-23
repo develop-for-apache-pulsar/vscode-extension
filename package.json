@@ -1,9 +1,9 @@
 {
-  "name": "apache-pulsar-admin",
-  "displayName": "Apache Pulsar Admin",
-  "description": "Manage your apache pulsar clusters",
+  "name": "develop-for-apache-pulsar",
+  "displayName": "Develop for Apache Pulsar",
+  "description": "Develop applications that use Apache Pulsar",
   "version": "0.1.0-alpha.0",
-  "publisher": "apache-pulsar",
+  "publisher": "Pulsar Community",
   "engines": {
     "vscode": "^1.77.0"
   },
@@ -17,10 +17,9 @@
     "messaging",
     "events"
   ],
-  "aiKey": "d398a2a9-a129-4d5d-b6e9-3a47d5a146a1",
   "repository": {
     "type": "git",
-    "url": "https://github.com/pulsar-admin-clients/vscode-extension"
+    "url": "https://github.com/develop-for-apache-pulsar/vscode-extension"
   },
   "icon": "images/Pulsar-Logo.png",
   "activationEvents": [],
@@ -35,69 +34,59 @@
     "watch-tests": "tsc -p . -w --outDir out",
     "pretest": "npm run compile-tests && npm run compile && npm run lint",
     "lint": "eslint src --ext ts --fix",
-    "test": "node ./out/test/runTest.js"
+    "test:ext": "npm run compile-tests && node ./out/test/integration/runTest.js",
+    "test:unit": "node ./node_modules/mocha/bin/mocha --require ./src/test/unit/hooks.js",
+    "test": "npm run test:unit && npm run test:ext"
   },
   "dependencies": {
+    "@vscode/extension-telemetry": "^0.8.0",
     "uuid": "^9.0.0"
   },
   "devDependencies": {
+    "@apache-pulsar/pulsar-admin": "^2.11.1-alpha.1",
+    "@types/chai": "^4.3.5",
     "@types/glob": "^8.1.0",
     "@types/mocha": "^10.0.1",
     "@types/node": "16.x",
+    "@types/sinon": "^10.0.15",
     "@types/uuid": "^9.0.1",
     "@types/vscode": "^1.77.0",
     "@typescript-eslint/eslint-plugin": "^5.59.1",
     "@typescript-eslint/parser": "^5.59.1",
     "@vscode/test-electron": "^2.3.0",
     "axios": "^1.4.0",
+    "chai": "^4.3.7",
     "css-loader": "^6.7.3",
     "eslint": "^8.39.0",
     "file-loader": "^6.2.0",
     "glob": "^8.1.0",
     "mocha": "^10.2.0",
+    "sinon": "^15.1.0",
     "style-loader": "^3.3.2",
     "ts-loader": "^9.4.2",
+    "ts-node": "^10.9.1",
     "typescript": "^5.0.4",
     "webpack": "^5.81.0",
-    "webpack-cli": "^5.0.2",
-    "@apache-pulsar/pulsar-admin": "^2.11.1-alpha.1"
+    "webpack-cli": "^5.0.2"
   },
   "contributes": {
     "configuration": {
       "type": "object",
-      "title": "Apache Pulsar Admin",
+      "title": "Develop for Apache Pulsar",
       "properties": {
-        "vs-pulsaradmin": {
+        "vs-delevopforpulsar": {
           "type": "object",
           "title": "Additional settings",
-          "description": "Saved Pulsar cluster configurations",
+          "description": "Saved cluster configurations",
           "properties": {
-            "vs-pulsaradmin.clusterConfigs": {
+            "providerConfigs": {
               "type": "array",
               "title": "Pulsar Clusters",
               "description": "Pulsar admin clusters",
               "default": [],
               "items": {
                 "type": "object",
-                "title": "cluster",
-                "properties": {
-                  "webServiceUrl": {
-                    "type": "string",
-                    "description": "The cluster web service url. Required."
-                  },
-                  "pulsarToken": {
-                    "type": "string",
-                    "description": "The pulsar token used for authentications. Optional."
-                  },
-                  "pulsarVersion": {
-                    "type": "string",
-                    "description": "The version of pulsar"
-                  },
-                  "clusterProviderTypeName": {
-                    "type": "string",
-                    "description": "The provider type"
-                  }
-                }
+                "title": "cluster"
               }
             }
           }
@@ -105,7 +94,7 @@
       }
     },
     "views": {
-      "pulsarAdminView": [
+      "developPulsarView": [
         {
           "id": "extension.vsPulsarClusterExplorer",
           "name": "Clusters"
@@ -115,14 +104,14 @@
     "viewsWelcome": [
       {
         "view": "extension.vsPulsarClusterExplorer",
-        "contents": "You have no saved clusters.\n[Add a provider](command:extension.vsPulsarAdminAddClusterConfig)\nTo learn more about how to get started [read our docs](https://github.com/pulsar-admin-clients/vscode-extension)."
+        "contents": "You have no saved clusters.\n[Add a provider](command:extension.vsDevelopPulsarAddClusterConfig)\nTo learn more about how to get started [read our docs](https://github.com/pulsar-admin-clients/vscode-extension)."
       }
     ],
     "viewsContainers": {
       "activitybar": [
         {
           "icon": "images/Pulsar-Logo.svg",
-          "id": "pulsarAdminView",
+          "id": "developPulsarView",
           "title": "Apache Pulsar"
         }
       ]
@@ -130,46 +119,41 @@
     "menus": {
       "view/title": [
         {
-          "command": "extension.vsPulsarAdminRefreshExplorer",
+          "command": "extension.vsDevelopPulsarRefreshExplorer",
           "when": "view == extension.vsPulsarClusterExplorer",
           "group": "navigation"
         },
         {
-          "command": "extension.vsPulsarAdminAddClusterConfig",
+          "command": "extension.vsDevelopPulsarAddClusterConfig",
           "when": "view == extension.vsPulsarClusterExplorer",
           "group": "navigation"
         }
       ],
       "view/item/context": [
         {
-          "command": "extension.vsPulsarAdminRemoveClusterConfig",
-          "when": "view == extension.vsPulsarClusterExplorer && viewItem == vsPulsarAdmin.provider",
+          "command": "extension.vsDevelopPulsarRemoveClusterConfig",
+          "when": "view == extension.vsPulsarClusterExplorer && viewItem == vsDevelopPulsar.provider",
           "group": "0@1"
         }
       ]
     },
     "commands": [
       {
-        "command": "extension.vsPulsarAdminRefreshExplorer",
+        "command": "extension.vsDevelopPulsarRefreshExplorer",
         "title": "Refresh providers",
-        "category": "PulsarAdmin",
+        "category": "DevelopPulsar",
         "icon": "$(refresh)"
       },
       {
-        "command": "extension.vsPulsarAdminAddClusterConfig",
+        "command": "extension.vsDevelopPulsarAddClusterConfig",
         "title": "Add saved provider",
-        "category": "PulsarAdmin",
+        "category": "DevelopPulsar",
         "icon": "$(plus)"
       },
       {
-        "command": "extension.vsPulsarAdminRemoveClusterConfig",
+        "command": "extension.vsDevelopPulsarRemoveClusterConfig",
         "title": "Remove",
-        "category": "PulsarAdmin"
-      },
-      {
-        "command": "extension.vsPulsarAdminViewTopicDetails",
-        "title": "Details",
-        "category": "PulsarAdmin"
+        "category": "DevelopPulsar"
       }
     ]
   }
