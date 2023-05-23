@@ -5,6 +5,10 @@ export const TELEM_KEY: string = 'd398a2a9-a129-4d5d-b6e9-3a47d5a146a1';
 export const EXTENSION_CONFIG_KEY = "vs-delevopforpulsar";
 export const PROVIDER_CONFIGS_KEY = "providerConfigs";
 
+// LANGUAGE
+export const LANGUAGE_NAME: string = 'pulsar';
+export const LANGUAGE_SCHEME: string = 'vs-pulsar';
+
 // COMMANDS
 export const COMMAND_REFRESH_EXPLORER = 'extension.vsDevelopPulsarRefreshExplorer';
 export const COMMAND_ADD_CLUSTER_CONFIG = 'extension.vsDevelopPulsarAddClusterConfig';
