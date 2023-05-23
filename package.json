@@ -70,6 +70,19 @@
     "webpack-cli": "^5.0.2"
   },
   "contributes": {
+    "languages": [
+      {
+        "id": "pulsar",
+        "aliases": [
+          "pulsar-topic-messages"
+        ],
+        "extensions": [
+          ".pulsar"
+        ],
+        "firstLine": "^(\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3})",
+        "configuration": "./language-configuration.json"
+      }
+    ],
     "configuration": {
       "type": "object",
       "title": "Develop for Apache Pulsar",
