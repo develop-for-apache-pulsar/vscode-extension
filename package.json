@@ -159,6 +159,11 @@
           "command": "extension.vsDevelopPulsarRemoveClusterConfig",
           "when": "view == extension.vsPulsarClusterExplorer && viewItem == vsDevelopPulsar.provider",
           "group": "0@1"
+        },
+        {
+          "command": "extension.vsDevelopPulsarWatchTopicMessages",
+          "when": "view == extension.vsPulsarClusterExplorer && viewItem == vsDevelopPulsar.topic",
+          "group": "0@1"
         }
       ]
     },
@@ -178,6 +183,11 @@
       {
         "command": "extension.vsDevelopPulsarRemoveClusterConfig",
         "title": "Remove",
+        "category": "DevelopPulsar"
+      },
+      {
+        "command": "extension.vsDevelopPulsarWatchTopicMessages",
+        "title": "Watch messages",
         "category": "DevelopPulsar"
       }
     ]

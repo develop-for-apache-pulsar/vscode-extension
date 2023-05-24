@@ -1,8 +1,30 @@
 import {TopicMessageEditorProvider} from "../providers/topicMessageEditorProvider";
 import * as vscode from "vscode";
+import {TopicNode} from "../providers/pulsarClusterTreeDataProvider/nodes/topic";
+import * as Constants from "../common/constants";
 
 export default class TopicMessageController {
   public static createTopicMessageEditorProvider(context: vscode.ExtensionContext): TopicMessageEditorProvider {
     return new TopicMessageEditorProvider(context);
+  }
+
+  static async watchTopicMessages(topicNode: TopicNode, context: vscode.ExtensionContext): Promise<void> {
+    const t = topicNode.topicData;
+
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders) {
+      vscode.window.showErrorMessage("Creating new Paw Draw files currently requires opening a workspace");
+      return;
+    }
+
+    const uri = vscode.Uri.from({
+      scheme: 'untitled',
+      path: `${t.providerTypeName}/${t.clusterName}/${t.tenantName}/${t.namespaceName}/${t.name}.pulsar`
+    });
+
+    //const uri = vscode.Uri.joinPath(workspaceFolders[0].uri, t.providerTypeName, t.clusterName, t.tenantName, t.namespaceName, `${t.name}.pulsar`)
+    //  .with({ scheme: 'untitled' });
+
+    vscode.commands.executeCommand('vscode.openWith', uri, Constants.TOPIC_MESSAGE_CUSTOM_EDITOR_VIEW_TYPE);
   }
 }

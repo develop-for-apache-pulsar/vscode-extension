@@ -16,7 +16,7 @@ export class TopicNode extends vscode.TreeItem implements ITopicNode {
   constructor(readonly pulsarAdmin: TPulsarAdmin, public readonly label: string, public readonly topicData: TTopic) {
     super(label, vscode.TreeItemCollapsibleState.None);
     this.contextValue = CONTEXT_VALUES.topic;
-    this.description = topicData.Type;
+    this.description = topicData.type;
     this.iconPath = {
       light: path.join(__dirname, '..', 'images', 'light', 'topic.svg'),
       dark: path.join(__dirname, '..', 'images', 'dark', 'topic.svg'),
@@ -28,7 +28,7 @@ export class TopicTree {
   constructor(private readonly pulsarAdmin: TPulsarAdmin) {
   }
 
-  async getChildren(tenantName: string, namespaceName: string): Promise<TAllPulsarAdminExplorerNodeTypes[]> {
+  async getChildren(tenantName: string, namespaceName: string, providerTypeName: string, clusterName: string): Promise<TAllPulsarAdminExplorerNodeTypes[]> {
     try{
       return this.pulsarAdmin.ListTopics(tenantName, namespaceName).then((topics) => {
         if(topics.length === 0) {
@@ -36,7 +36,9 @@ export class TopicTree {
         }
 
         return topics.map((topic) => {
-          return new TopicNode(this.pulsarAdmin, topic.Name, topic);
+          topic.providerTypeName = providerTypeName
+          topic.clusterName = clusterName;
+          return new TopicNode(this.pulsarAdmin, topic.name, topic);
         });
       }).catch((error) => {
         return [new ErrorNode(error)];

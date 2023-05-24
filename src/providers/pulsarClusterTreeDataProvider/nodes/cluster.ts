@@ -8,10 +8,11 @@ import {TAllPulsarAdminExplorerNodeTypes} from "../../../types/tAllPulsarAdminEx
 
 export interface IClusterNode extends vscode.TreeItem {
   readonly clusterInfo: TPulsarAdminProviderCluster;
+  readonly providerTypeName: string;
 }
 
 export class ClusterNode extends vscode.TreeItem implements IClusterNode {
-  constructor(readonly label: string, readonly clusterInfo: TPulsarAdminProviderCluster) {
+  constructor(readonly label: string, readonly clusterInfo: TPulsarAdminProviderCluster, readonly providerTypeName: string) {
     super(label, vscode.TreeItemCollapsibleState.Collapsed);
     this.contextValue = CONTEXT_VALUES.cluster;
     this.description = "cluster " + (clusterInfo.pulsarVersion !== undefined && clusterInfo.pulsarVersion !== '' ? `v${clusterInfo.pulsarVersion}` : ``);
@@ -33,7 +34,7 @@ export class ClusterTree {
     }
 
     return providerNode.providerConfig.pulsarAdminClusters.map((pulsarAdminCluster) => {
-      return new ClusterNode(pulsarAdminCluster.name, pulsarAdminCluster);
+      return new ClusterNode(pulsarAdminCluster.name, pulsarAdminCluster, providerNode.providerConfig.settings.typeName);
     });
   }
 }

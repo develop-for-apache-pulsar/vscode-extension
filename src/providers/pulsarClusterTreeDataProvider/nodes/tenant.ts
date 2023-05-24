@@ -9,10 +9,12 @@ import {TAllPulsarAdminExplorerNodeTypes} from "../../../types/tAllPulsarAdminEx
 
 export interface ITenantNode extends vscode.TreeItem{
   readonly tenant: TPulsarAdminProviderTenant;
+  readonly providerTypeName: string;
+  readonly clusterName: string;
 }
 
 export class TenantNode extends vscode.TreeItem implements ITenantNode {
-  constructor(readonly label: string, readonly tenant: TPulsarAdminProviderTenant) {
+  constructor(readonly label: string, readonly tenant: TPulsarAdminProviderTenant, readonly providerTypeName: string, readonly clusterName: string) {
     super(label, vscode.TreeItemCollapsibleState.Collapsed);
     this.contextValue = CONTEXT_VALUES.tenant;
     this.description = "tenant";
@@ -35,7 +37,7 @@ export class TenantTree {
 
     try{
       return clusterNode.clusterInfo.tenants.map((tenant) => {
-        return new TenantNode(tenant.name, tenant);
+        return new TenantNode(tenant.name, tenant, clusterNode.providerTypeName, clusterNode.clusterInfo.name);
       });
     }catch (err) {
       return [new ErrorNode(err)];
