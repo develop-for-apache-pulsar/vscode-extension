@@ -5,7 +5,7 @@ import {TPulsarAdmin} from "../types/tPulsarAdmin";
 import {PulsarAdminProviders, TProviderInfo} from "../pulsarAdminProviders";
 import {TPulsarAdminProviderCluster} from "../types/tPulsarAdminProviderCluster";
 import {trace} from "../utils/traceDecorator";
-import {TWizardMessage} from "../types/tWizardMessage";
+import {TWebviewMessage} from "../types/tWebviewMessage";
 
 enum MessageCommand {
   loaded = 'loaded',
@@ -42,7 +42,7 @@ export class AddClusterConfigWizard extends Wizard {
     this.showPage(this.chooseProviderTypePage());
   }
 
-  private async receivedMessage(message: TWizardMessage): Promise<void> {
+  private async receivedMessage(message: TWebviewMessage): Promise<void> {
     switch (message.command) {
       case MessageCommand.loaded:
         // no op

@@ -1,4 +1,4 @@
-import {TTopic} from "./TTopic";
+import {TTopic} from "./tTopic";
 import {ClusterData} from "@apache-pulsar/pulsar-admin/dist/gen/models/cluster-data";
 
 export type TPulsarAdmin = {

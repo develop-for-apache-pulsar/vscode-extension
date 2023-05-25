@@ -1,5 +1,5 @@
 import { TPulsarAdmin } from "../../types/tPulsarAdmin";
-import {TTopic, TopicType} from "../../types/TTopic";
+import {TTopic, TopicType} from "../../types/tTopic";
 
 import PulsarAdmin from "@apache-pulsar/pulsar-admin";
 import {ClusterData} from "@apache-pulsar/pulsar-admin/dist/gen/models/cluster-data";

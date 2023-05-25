@@ -3,7 +3,7 @@ import { TPulsarAdmin } from "../../../types/tPulsarAdmin";
 import {MessageNode} from "./message";
 import {ErrorNode} from "./error";
 import * as path from "path";
-import {TTopic} from "../../../types/TTopic";
+import {TTopic} from "../../../types/tTopic";
 import {CONTEXT_VALUES, ExplorerMessageTypes} from "../../../common/constants";
 import {TAllPulsarAdminExplorerNodeTypes} from "../../../types/tAllPulsarAdminExplorerNodeTypes";
 

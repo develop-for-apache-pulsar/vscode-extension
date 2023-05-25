@@ -1,4 +1,4 @@
-import {TopicMessageEditorProvider} from "../providers/topicMessageEditorProvider";
+import {TopicMessageEditorProvider} from "../providers/topicMessageEditorProvider/topicMessageEditorProvider";
 import * as vscode from "vscode";
 import {TopicNode} from "../providers/pulsarClusterTreeDataProvider/nodes/topic";
 import * as Constants from "../common/constants";
@@ -19,11 +19,8 @@ export default class TopicMessageController {
 
     const uri = vscode.Uri.from({
       scheme: 'untitled',
-      path: `${t.providerTypeName}/${t.clusterName}/${t.tenantName}/${t.namespaceName}/${t.name}.pulsar`
+      path: `${t.providerTypeName}/${t.clusterName}/${t.tenantName}/${t.namespaceName}/${t.type.toLowerCase()}/${t.name}.pulsar`
     });
-
-    //const uri = vscode.Uri.joinPath(workspaceFolders[0].uri, t.providerTypeName, t.clusterName, t.tenantName, t.namespaceName, `${t.name}.pulsar`)
-    //  .with({ scheme: 'untitled' });
 
     vscode.commands.executeCommand('vscode.openWith', uri, Constants.TOPIC_MESSAGE_CUSTOM_EDITOR_VIEW_TYPE);
   }
