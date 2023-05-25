@@ -7,7 +7,7 @@ export default class TopicMessageDocumentContent implements TTopicMessageDocumen
               public readonly tenantName: string,
               public readonly namespaceName: string,
               public readonly topicName: string,
-              public readonly topicAddress: string,
+              public readonly topicType: string,
               public readonly messages: TTopicMessage[] = []) {
   }
 
@@ -35,8 +35,8 @@ export default class TopicMessageDocumentContent implements TTopicMessageDocumen
         throw new Error("topicName is not set");
       }
 
-      if(!parsed.topicAddress || parsed.topicAddress.length < 1){
-        throw new Error("topicAddress is not set");
+      if(!parsed.topicType || parsed.topicType.length < 1){
+        throw new Error("topicType is not set");
       }
 
       if(!parsed.messages){
@@ -48,7 +48,7 @@ export default class TopicMessageDocumentContent implements TTopicMessageDocumen
         parsed.tenantName,
         parsed.namespaceName,
         parsed.topicName,
-        parsed.topicAddress,
+        parsed.topicType,
         parsed.messages);
     }catch (e: any) {
       throw new Error(`The pulsar file is not formatted correctly - ${e.message}`);

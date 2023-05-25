@@ -11,12 +11,6 @@ export default class TopicMessageController {
   static async watchTopicMessages(topicNode: TopicNode, context: vscode.ExtensionContext): Promise<void> {
     const t = topicNode.topicData;
 
-    const workspaceFolders = vscode.workspace.workspaceFolders;
-    if (!workspaceFolders) {
-      vscode.window.showErrorMessage("Creating new Paw Draw files currently requires opening a workspace");
-      return;
-    }
-
     const uri = vscode.Uri.from({
       scheme: 'untitled',
       path: `${t.providerTypeName}/${t.clusterName}/${t.tenantName}/${t.namespaceName}/${t.type.toLowerCase()}/${t.name}.pulsar`

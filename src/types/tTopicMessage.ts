@@ -1,12 +1,11 @@
-import * as PulsarClient from "pulsar-client";
+
 
 export type TTopicMessage = {
   readonly topicName?: string;
-  readonly messageId?: PulsarClient.MessageId;
-  readonly publishTimestamp?: number;
-  readonly eventTimestamp?: number;
-  readonly data?: Buffer;
-  readonly partitionKey?: string;
+  readonly messageId?: string;
+  readonly publishTime?: string;
+  readonly data?: string;
+  readonly key?: string;
   readonly properties?: { [Key:string]: string };
   readonly redeliveryCount?: number;
 };

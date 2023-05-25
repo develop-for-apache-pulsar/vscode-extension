@@ -24,16 +24,16 @@ export default class TopicMessagesDocument implements vscode.CustomDocument {
 
     // Opening a new document. Parse the info from the uri and build a new document.
     if (uri.scheme === 'untitled') {
-      const uriParts = uri.path.split('.');
+      console.log(uri.path);
+      const uriParts = uri.path.split('/');
       const providerTypeName = uriParts[0];
       const clusterName = uriParts[1];
       const tenantName = uriParts[2];
       const namespaceName = uriParts[3];
       const topicType = uriParts[4];
-      const topicName = uriParts[5].replace('.pulsar', '');
+      const topicName = uriParts[5]?.replace('.pulsar', '');
 
-      const topicAddress = `${topicType}://${tenantName}/${namespaceName}/${topicName}`;
-      const fileContents =  new TopicMessageDocumentContent(providerTypeName, clusterName, tenantName, namespaceName, topicName, topicAddress);
+      const fileContents =  new TopicMessageDocumentContent(providerTypeName, clusterName, tenantName, namespaceName, topicName, topicType);
 
       return new TopicMessagesDocument(uri, fileContents);
     }
@@ -94,12 +94,20 @@ export default class TopicMessagesDocument implements vscode.CustomDocument {
     return this._savedTenant!;
   }
 
-  get topicAddress(): string {
-    return this.fileContents.topicAddress;
+  get topicType(): string {
+    return this.fileContents.topicType;
   }
 
   get messages(): TTopicMessage[] {
     return this.fileContents.messages;
+  }
+
+  get topicName() : string{
+    return this.fileContents.topicName;
+  }
+
+  get namespaceName() : string {
+    return this.fileContents.namespaceName;
   }
 
   public addMessage(message: TTopicMessage){

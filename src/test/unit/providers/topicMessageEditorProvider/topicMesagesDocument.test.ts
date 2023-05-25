@@ -3,14 +3,19 @@ import TopicMessageDocumentContent from "../../../../providers/topicMessageEdito
 
 describe("Topic message document content tests", () => {
   it("should construct new document content", () => {
-    const content = new TopicMessageDocumentContent("providerTypeName", "clusterName", "tenantName", "namespaceName", "topicName", "topicAddress");
+    const content = new TopicMessageDocumentContent("providerTypeName",
+      "clusterName",
+      "tenantName",
+      "namespaceName",
+      "topicName",
+      "topicType");
 
     assert.equal(content.providerTypeName, "providerTypeName");
     assert.equal(content.clusterName, "clusterName");
     assert.equal(content.tenantName, "tenantName");
     assert.equal(content.namespaceName, "namespaceName");
     assert.equal(content.topicName, "topicName");
-    assert.equal(content.topicAddress, "topicAddress");
+    assert.equal(content.topicType, "topicType");
     assert.equal(content.messages.length, 0);
   });
 
@@ -21,7 +26,7 @@ describe("Topic message document content tests", () => {
       tenantName: "tenantName",
       namespaceName: "namespaceName",
       topicName: "topicName",
-      topicAddress: "topicAddress",
+      topicType: "topicType",
       messages: []
     };
 
@@ -31,7 +36,7 @@ describe("Topic message document content tests", () => {
     assert.equal(content.tenantName, "tenantName");
     assert.equal(content.namespaceName, "namespaceName");
     assert.equal(content.topicName, "topicName");
-    assert.equal(content.topicAddress, "topicAddress");
+    assert.equal(content.topicType, "topicType");
     assert.equal(content.messages.length, 0);
   });
 
@@ -49,7 +54,7 @@ describe("Topic message document content tests", () => {
       tenantName: "tenantName",
       namespaceName: "namespaceName",
       topicName: "topicName",
-      topicAddress: "topicAddress",
+      topicType: "topicType",
       messages: []
     };
 
@@ -57,9 +62,14 @@ describe("Topic message document content tests", () => {
   });
 
   it("should add a message", () => {
-    const content = new TopicMessageDocumentContent("providerTypeName", "clusterName", "tenantName", "namespaceName", "topicName", "topicAddress");
+    const content = new TopicMessageDocumentContent("providerTypeName",
+      "clusterName",
+      "tenantName",
+      "namespaceName",
+      "topicName",
+      "topicType");
     content.addMessage({
-      publishTimestamp: 0,
+      publishTime: "asdf",
       topicName: "topicName",
     });
 

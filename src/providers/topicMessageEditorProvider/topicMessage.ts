@@ -1,39 +1,28 @@
 import {TTopicMessage} from "../../types/tTopicMessage";
-import * as PulsarClient from "pulsar-client";
 
 export default class TopicMessage implements TTopicMessage{
-  private readonly _decodePartitionKey: string | undefined;
-  private readonly _decodedData: string | undefined;
+  private readonly _decodedPayload: string | undefined;
 
-  constructor(public readonly topicName: string,
-              public readonly messageId: PulsarClient.MessageId,
-              public readonly publishTimestamp: number,
-              public readonly eventTimestamp: number,
-              public readonly data: Buffer,
-              public readonly partitionKey: string,
+  constructor(public readonly messageId: string,
+              public readonly publishTime: string,
+              public readonly payload: string,
+              public readonly key: string,
               public readonly properties: { [Key:string]: string },
               public readonly redeliveryCount: number) {
-    let buff = new Buffer(partitionKey,'base64');
-    this._decodePartitionKey = buff.toString('ascii');
-    this._decodedData = data.toString('utf8');
+    let buff = new Buffer(payload,'base64');
+    this._decodedPayload = buff.toString();
   }
 
-  get decodedPartitionKey(): string | undefined{
-    return this._decodePartitionKey;
+  get decodedPayload(): string | undefined{
+    return this._decodedPayload;
   }
 
-  get decodedData(): string | undefined{
-    return this._decodedData;
-  }
-
-  public static fromPulsarMessage(message: PulsarClient.Message): TopicMessage{
-    return new TopicMessage(message.getTopicName(),
-                            message.getMessageId(),
-                            message.getPublishTimestamp(),
-                            message.getEventTimestamp(),
-                            message.getData(),
-                            message.getPartitionKey(),
-                            message.getProperties(),
-                            message.getRedeliveryCount());
+  public static fromWsMessage(message: any): TopicMessage{
+    return new TopicMessage(message.messageId,
+                            message.publishTime,
+                            message.payload,
+                            message.key,
+                            message.properties,
+                            message.redeliveryCount);
   }
 }

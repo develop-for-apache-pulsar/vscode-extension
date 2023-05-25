@@ -1,8 +1,6 @@
 import * as vscode from "vscode";
 import TopicMessagesDocument from "./topicMessagesDocument";
-import TopicMessageReader from "./topicMessageReader";
-import {TTopicMessage} from "../../types/tTopicMessage";
-import {TReaderMessage} from "../../types/tReaderMessage";
+import {webSocket} from "rxjs/webSocket";
 
 export class TopicMessageEditorProvider implements vscode.CustomReadonlyEditorProvider<TopicMessagesDocument> {
 
@@ -14,13 +12,14 @@ export class TopicMessageEditorProvider implements vscode.CustomReadonlyEditorPr
 
   public async resolveCustomEditor(document: TopicMessagesDocument, webviewPanel: vscode.WebviewPanel, token: vscode.CancellationToken): Promise<void> {
     //console.log(document);
-    let lastReadTimestamp: number | undefined = Date.now();
 
-    if(document.clusterInfo.brokerServiceUrl === undefined) {
-      vscode.window.showErrorMessage("The broker service information was not found when this cluster was saved. To watch topic messages, please ensure that the cluster is saved with the broker service information.");
+    if(document.clusterInfo.websocketUrl === undefined) {
+      vscode.window.showErrorMessage("To watch topic messages the cluster must have websocket services running. Please ensure that the service is running and add the cluster again.");
       webviewPanel.dispose();
       return;
     }
+
+    const websocketAddress = `${document.clusterInfo.websocketUrl}/reader/${document.topicType}/${document.tenantInfo.name}/${document.namespaceName}/${document.topicName}?messageId=latest`;
 
     webviewPanel.webview.options = {
       enableScripts: true,
@@ -31,33 +30,17 @@ export class TopicMessageEditorProvider implements vscode.CustomReadonlyEditorPr
       document?.dispose();
     }, null, this.context.subscriptions);
 
-    // Make sure a reader is created before getting too far. If the namespace/topic does not exist, this will fail.
-    const topicMessageReader = new TopicMessageReader(this.context, document.clusterInfo.brokerServiceUrl, document.tenantInfo.pulsarToken);
-
     webviewPanel.webview.html = this.buildView();
 
-    await topicMessageReader.createReader(`vs-code-reader`, document.topicAddress);
-
-    // All checks have passed
+    const subject = webSocket(websocketAddress);
 
     // Load the existing messages into the web view
     document.messages.forEach((message) => {
-      lastReadTimestamp = message.publishTimestamp; //use the timestamp of the last message as the starting point for the reader
       this.postMessage(webviewPanel, message);
     });
 
-    // Start the reader
-    const observer = topicMessageReader.startReader(lastReadTimestamp, undefined, undefined, token);
-
-    if(!observer){
-      vscode.window.showErrorMessage("Could not start reading messages");
-      webviewPanel.dispose();
-      document.dispose();
-      return;
-    }
-
     // Start observing messages from the last read timestamp
-    observer.subscribe({
+    subject.subscribe({
       next: (message: any) => {
         this.postMessage(webviewPanel, message);
       },
@@ -70,7 +53,7 @@ export class TopicMessageEditorProvider implements vscode.CustomReadonlyEditorPr
     });
   }
 
-  private postMessage(panel: vscode.WebviewPanel, message: TTopicMessage | TReaderMessage): void {
+  private postMessage(panel: vscode.WebviewPanel, message: any): void {
     panel.webview.postMessage(message);
   }
 
