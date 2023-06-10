@@ -6,6 +6,6 @@ export class Provider extends BaseProvider{
       throw new Error("Web service url is required");
     }
 
-    super(webServiceUrl, pulsarToken);
+    super("standalone", webServiceUrl, pulsarToken);
   }
 }

@@ -3,8 +3,8 @@
 'use strict';
 
 const path = require('path');
+const terserPlugin = require("terser-webpack-plugin");
 
-//@ts-check
 /** @typedef {import('webpack').Configuration} WebpackConfig **/
 
 /** @type WebpackConfig */
@@ -22,6 +22,7 @@ const extensionConfig = {
   externals: {
     vscode: 'commonjs vscode', // the vscode-module is created on-the-fly and must be excluded. Add other modules that cannot be webpack'ed, 📖 -> https://webpack.js.org/configuration/externals/
     applicationinsights: 'applicationinsights', // ignored because we don't ship native module
+    "isomorphic-ws": "isomorphic-ws",
   },
   resolve: {
     // support reading TypeScript and JavaScript files, 📖 -> https://github.com/TypeStrong/ts-loader
@@ -48,4 +49,19 @@ const extensionConfig = {
     level: "log", // enables logging required for problem matchers
   },
 };
+
+if(process.env.NODE_ENV === "production"){
+  extensionConfig.optimization = {
+    minimize: true,
+      minimizer: [new terserPlugin({
+      extractComments: false,
+      terserOptions: {
+        compress: {
+          pure_funcs: ['console.debug', 'console.info']
+        },
+      },
+    })],
+  };
+}
+
 module.exports = [ extensionConfig ];

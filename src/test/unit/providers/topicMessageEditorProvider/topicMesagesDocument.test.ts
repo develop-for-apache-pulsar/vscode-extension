@@ -8,7 +8,9 @@ describe("Topic message document content tests", () => {
       "tenantName",
       "namespaceName",
       "topicName",
-      "topicType");
+      "topicType",
+      "latest",
+      []);
 
     assert.equal(content.providerTypeName, "providerTypeName");
     assert.equal(content.clusterName, "clusterName");
@@ -27,6 +29,7 @@ describe("Topic message document content tests", () => {
       namespaceName: "namespaceName",
       topicName: "topicName",
       topicType: "topicType",
+      lastMessageId: "latest",
       messages: []
     };
 
@@ -67,10 +70,13 @@ describe("Topic message document content tests", () => {
       "tenantName",
       "namespaceName",
       "topicName",
-      "topicType");
+      "topicType",
+    "latest",
+      []);
     content.addMessage({
       publishTime: "asdf",
       topicName: "topicName",
+      messageId: "messageId",
     });
 
     assert.equal(content.messages.length, 1);

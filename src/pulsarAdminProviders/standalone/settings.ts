@@ -22,7 +22,7 @@ export class Settings implements TProviderSettings {
 
     public async receivedMessage(message: any): Promise<void> {
       switch (message.command) {
-        case SaveProviderMessageCommand.SetWebServiceUrl:
+        case SaveProviderMessageCommand.setWebServiceUrl:
           const webServiceUrl = message.text as string;
           this.tempCreds.webServiceUrl = webServiceUrl;
           this.wizard.webServiceUrl = webServiceUrl;
@@ -30,7 +30,7 @@ export class Settings implements TProviderSettings {
           try {
             this.pulsarAdminProvider = new Provider(webServiceUrl) as TPulsarAdmin;
             await this.validateWebServiceUrl(this.pulsarAdminProvider);
-            this.wizard.showPage(await this.providerSummaryPage());
+            this.wizard.showPage(this.webSocketUrlPage());
           } catch (err: any) {
             this.wizard.postError(SaveProviderMessageError.NeedTokenError, err);
           }
@@ -40,7 +40,14 @@ export class Settings implements TProviderSettings {
           const providerName = message.text as string;
           this.wizard.configName = providerName;
           break;
-        case SaveProviderMessageCommand.Cancel:
+        case SaveProviderMessageCommand.setWebSocketUrl:
+          if(message.text && message.text.length > 0) {
+            this.wizard.webSocketUrl = message.text as string;
+          }
+
+          this.wizard.showPage(await this.providerSummaryPage());
+          break;
+        case SaveProviderMessageCommand.cancel:
           this.wizard.dispose();
           break;
       }
@@ -66,13 +73,39 @@ export class Settings implements TProviderSettings {
         </div>
         <div class="row h-25 align-items-center">
           <div class="offset-4 col-2">
-              <button class="btn btn-primary btn-lg" onclick='sendMsg("${SaveProviderMessageCommand.SetWebServiceUrl}",document.getElementById("webServiceUrl").value)'>Next >></button>
+              <button class="btn btn-primary btn-lg" onclick='sendMsg("${SaveProviderMessageCommand.setWebServiceUrl}",document.getElementById("webServiceUrl").value)'>Next >></button>
             </div>
           <div class="col-2">
-              <button class="btn btn-secondary btn-lg" onclick='sendMsg("${SaveProviderMessageCommand.Cancel}","")'>Cancel</button>
+              <button class="btn btn-secondary btn-lg" onclick='sendMsg("${SaveProviderMessageCommand.cancel}","")'>Cancel</button>
           </div>
           <div class="col-4">&nbsp;</div>
         </div>`;
+    }
+
+    private webSocketUrlPage(): string {
+      return `
+        <div class="row h-75">
+          <div class="col-12 align-self-center text-center"><h4>Optionally, provide the cluster's web socket url. This is not required but quite a few feaures will be disabled without it.</h4></div>
+          <div class="offset-2 col-8 text-center">
+              <div class="input-group mb-3">
+                <div class="input-group-prepend">
+                  <span class="input-group-text" id="basic-addon1">&nbsp;</span>
+                </div>
+                <input type="text" id="webSocketUrl" class="form-control" value="ws://localhost:8080/ws/v2" aria-label="webSocketUrl" aria-describedby="basic-addon1">
+              </div>
+          </div>
+          <div class="col-2 text-center">&nbsp;</div>
+        </div>
+        <div class="row h-25 align-items-center">
+          <div class="offset-4 col-2">
+              <button class="btn btn-primary btn-lg" onclick='sendMsg("${SaveProviderMessageCommand.setWebSocketUrl}",document.getElementById("webSocketUrl").value)'>Next >></button>
+            </div>
+          <div class="col-2">
+              <button class="btn btn-secondary btn-lg" onclick='sendMsg("${SaveProviderMessageCommand.cancel}","")'>Cancel</button>
+          </div>
+          <div class="col-4">&nbsp;</div>
+        </div>\`;
+      `;
     }
 
     private buildTenantCheckItem(clusterName: string, tenantName: string) {
@@ -160,10 +193,10 @@ export class Settings implements TProviderSettings {
       </div>
       <div class="row h-25 align-items-center">
         <div class="offset-3 col-3">
-            <button class="btn btn-primary btn-lg" onclick='sendMsg("${SaveProviderMessageCommand.setConfigName}",document.getElementById("providerName").value); sendMsg("${SaveProviderMessageCommand.SaveConfig}",buildClusterTenants())'>Save Configuration</button>
+            <button class="btn btn-primary btn-lg" onclick='sendMsg("${SaveProviderMessageCommand.setConfigName}",document.getElementById("providerName").value); sendMsg("${SaveProviderMessageCommand.saveConfig}",buildClusterTenants())'>Save Configuration</button>
           </div>
         <div class="col-2">
-            <button class="btn btn-secondary btn-lg" onclick='sendMsg("${SaveProviderMessageCommand.Cancel}","")'>Cancel</button>
+            <button class="btn btn-secondary btn-lg" onclick='sendMsg("${SaveProviderMessageCommand.cancel}","")'>Cancel</button>
         </div>
         <div class="col-4">&nbsp;</div>
       </div>`;
@@ -172,11 +205,13 @@ export class Settings implements TProviderSettings {
 }
 
 enum SaveProviderMessageCommand {
-  Loaded = 'loaded',
-  SetWebServiceUrl = 'setWebServiceUrl',
-  SaveConfig = 'saveConfig',
-  Cancel = 'cancel',
+  loaded = 'loaded',
+  setWebServiceUrl = 'setWebServiceUrl',
+  saveConfig = 'saveConfig',
+  cancel = 'cancel',
   setConfigName = 'setConfigName',
+
+  setWebSocketUrl = 'setWebSocketUrl',
 }
 
 enum SaveProviderMessageError {

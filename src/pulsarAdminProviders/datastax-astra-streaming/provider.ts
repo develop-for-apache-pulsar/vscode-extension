@@ -1,6 +1,5 @@
 import { TPulsarAdmin } from "../../types/tPulsarAdmin";
 import {BaseProvider} from "../base-provider/provider";
-import {trace} from "../../utils/traceDecorator";
 
 export class Provider extends BaseProvider implements TPulsarAdmin{
   constructor(webServiceUrl: string, pulsarToken: string) {
@@ -12,6 +11,6 @@ export class Provider extends BaseProvider implements TPulsarAdmin{
       throw new Error("Pulsar token is required");
     }
 
-    super(webServiceUrl, pulsarToken);
+    super("datastax-astra-streaming", webServiceUrl, pulsarToken);
   }
 }

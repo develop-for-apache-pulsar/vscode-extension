@@ -85,7 +85,7 @@ export class Wizard{
   }
 
   private buildWebview(content: string): string {
-    const scriptPathOnDisk = vscode.Uri.joinPath(this.extensionUri, 'scripts','script.js');
+    const scriptPathOnDisk = vscode.Uri.joinPath(this.extensionUri, 'scripts','addProvider.js');
     const scriptUri = this.webPanel?.webview.asWebviewUri(scriptPathOnDisk);
     const stylePath = vscode.Uri.joinPath(this.extensionUri, 'styles','bootstrap.min.css');
     const stylesUri = this.webPanel?.webview.asWebviewUri(stylePath);

@@ -2,19 +2,11 @@ import * as vscode from "vscode";
 import * as fs from "fs";
 import ErrnoException = NodeJS.ErrnoException;
 import TopicMessageDocumentContent from "./topicMessageDocumentContent";
-import ConfigurationProvider from "../configurationProvider/configuration";
-import {TPulsarAdminProviderCluster} from "../../types/tPulsarAdminProviderCluster";
-import {TSavedProviderConfig} from "../../types/tSavedProviderConfig";
-import {TPulsarAdminProviderTenant} from "../../types/tPulsarAdminProviderTenant";
-import {TTopicMessage} from "../../types/tTopicMessage";
 
 export default class TopicMessagesDocument implements vscode.CustomDocument {
-  private readonly _savedProviderConfig: TSavedProviderConfig | undefined;
-  private readonly _savedCluster: TPulsarAdminProviderCluster | undefined;
-  private readonly _savedTenant: TPulsarAdminProviderTenant | undefined;
-
   public static async create(uri: vscode.Uri, backupId: string | undefined): Promise<TopicMessagesDocument> {
     // If we have a backup, read that.
+    console.debug(typeof backupId === 'string' ? `Creating document from backup` : `Creating new document`);
     const dataFile = typeof backupId === 'string' ? vscode.Uri.parse(backupId) : uri;
 
     return TopicMessagesDocument.readFile(dataFile);
@@ -24,8 +16,10 @@ export default class TopicMessagesDocument implements vscode.CustomDocument {
 
     // Opening a new document. Parse the info from the uri and build a new document.
     if (uri.scheme === 'untitled') {
-      console.log(uri.path);
-      const uriParts = uri.path.split('/');
+      console.debug("Using untitled scheme");
+      const uriParts = uri.path.split('\\');
+
+      console.debug("uriParts: %o", uriParts);
       const providerTypeName = uriParts[0];
       const clusterName = uriParts[1];
       const tenantName = uriParts[2];
@@ -33,24 +27,32 @@ export default class TopicMessagesDocument implements vscode.CustomDocument {
       const topicType = uriParts[4];
       const topicName = uriParts[5]?.replace('.pulsar', '');
 
-      const fileContents =  new TopicMessageDocumentContent(providerTypeName, clusterName, tenantName, namespaceName, topicName, topicType);
+      const newTopicContent =  new TopicMessageDocumentContent(providerTypeName, clusterName, tenantName, namespaceName, topicName, topicType, "earliest", []);
 
-      return new TopicMessagesDocument(uri, fileContents);
+      console.debug("New topic content: %o", newTopicContent);
+      return new TopicMessagesDocument(uri, newTopicContent);
     }
 
     // Otherwise parse the existing file's contents.
+    console.debug("Using existing file");
     let fileContents: TopicMessageDocumentContent | undefined = undefined;
     try {
-
       fs.readFile(uri.fsPath, "utf8", (err: ErrnoException | null, data: string) => {
         if (err){
-          throw new Error(`An error occurred trying to read the pulsar file - ${err.message}`);
+          throw new Error(`An error occurred trying to read the pulsar file - ${err?.message}`);
         }
 
-        fileContents = TopicMessageDocumentContent.fromJson(data);
+        console.debug("File contents: %o", data);
+
+        try{
+          fileContents = TopicMessageDocumentContent.fromJson(data);
+        }catch (e: any){
+          throw new Error('Could not build document from file contents - ' + e?.message);
+        }
       });
-    } catch {
-      throw new Error('Could not build document from file contents. Content is either not valid json or not formatted correctly');
+    } catch(e) {
+      console.error(e);
+      throw e;
     }
 
     if (!fileContents) {
@@ -62,66 +64,19 @@ export default class TopicMessagesDocument implements vscode.CustomDocument {
 
   constructor(
     public readonly uri: vscode.Uri,
-    private readonly fileContents: TopicMessageDocumentContent
+    public readonly content: TopicMessageDocumentContent
   ) {
-    const savedProviderConfigs = ConfigurationProvider.getClusterConfigs();
-
-    this._savedProviderConfig = savedProviderConfigs.find((providerConfig) => { return providerConfig.providerTypeName === fileContents.providerTypeName; });
-    if(!this._savedProviderConfig){
-      throw new Error(`Could not find provider config for providerTypeName: ${fileContents.providerTypeName}`);
-    }
-
-    this._savedCluster = this._savedProviderConfig.clusters.find((cluster) => { return cluster.name === fileContents.clusterName; });
-    if(!this._savedCluster){
-      throw new Error(`Could not find cluster for name: ${fileContents.clusterName}`);
-    }
-
-    this._savedTenant = this._savedCluster.tenants.find((tenant) => { return tenant.name === fileContents.tenantName; });
-    if(!this._savedTenant){
-      throw new Error(`Could not find tenant for name: ${fileContents.tenantName}`);
-    }
-  }
-
-  get providerConfig(): TSavedProviderConfig {
-    return this._savedProviderConfig!;
-  }
-
-  get clusterInfo(): TPulsarAdminProviderCluster {
-    return this._savedCluster!;
-  }
-
-  get tenantInfo(): TPulsarAdminProviderTenant {
-    return this._savedTenant!;
-  }
-
-  get topicType(): string {
-    return this.fileContents.topicType;
-  }
-
-  get messages(): TTopicMessage[] {
-    return this.fileContents.messages;
-  }
-
-  get topicName() : string{
-    return this.fileContents.topicName;
-  }
-
-  get namespaceName() : string {
-    return this.fileContents.namespaceName;
-  }
-
-  public addMessage(message: TTopicMessage){
-    this.fileContents.addMessage(message);
   }
 
   public dispose(): void {
-
+    console.debug("Disposing document");
   }
 
   /**
    * Called by VS Code when the user saves the document.
    */
   public async save(cancellation: vscode.CancellationToken): Promise<void> {
+    console.debug("Saving document");
     await this.saveAs(this.uri, cancellation);
   }
 
@@ -129,20 +84,24 @@ export default class TopicMessagesDocument implements vscode.CustomDocument {
    * Called by VS Code when the user saves the document to a new location.
    */
   public async saveAs(targetResource: vscode.Uri, cancellation: vscode.CancellationToken): Promise<void> {
-    fs.writeFile(targetResource.fsPath, this.fileContents.toJson(), (err: ErrnoException | null) => {
+    console.debug("Saving file contents as: %o", targetResource);
+    console.debug("File contents: %o", this.content.toJson());
+
+    fs.writeFile(targetResource.fsPath, this.content.toJson(), (err: ErrnoException | null) => {
       if (err) {
-        vscode.window.showErrorMessage(`An error occurred trying to save the pulsar file - ${err.message}`);
         console.error(err);
+        throw new Error(`An error occurred trying to save the pulsar file - ${err.message}`); //let vscode handle the error
       }
     });
   }
 
   /**
-   * Called by VS Code to backup the edited document.
+   * Called by VS Code to back up the edited document.
    *
    * These backups are used to implement hot exit.
    */
   public async backup(destination: vscode.Uri, cancellation: vscode.CancellationToken): Promise<vscode.CustomDocumentBackup> {
+    console.debug("Backing up document");
     await this.saveAs(destination, cancellation);
 
     return {

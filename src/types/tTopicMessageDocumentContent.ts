@@ -8,5 +8,7 @@ export type TTopicMessageDocumentContent = {
   get namespaceName(): string,
   get topicName(): string,
   get messages(): TTopicMessage[],
+  get lastMessageId(): string,
+  set lastMessageId(value: string),
   addMessage(message: TTopicMessage): void;
 };

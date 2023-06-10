@@ -5,15 +5,17 @@ import * as vscode from "vscode";
 import {PulsarAdminProviderNode} from "../providers/pulsarClusterTreeDataProvider/nodes/pulsarAdminProvider";
 import {PulsarAdminProviders} from "../pulsarAdminProviders";
 import {trace} from "../utils/traceDecorator";
+import {PulsarClusterTreeDataProvider} from "../providers/pulsarClusterTreeDataProvider/explorer";
 
 export class ConfigController {
   @trace('Show Add Cluster Config Wizard')
-  public static async showAddClusterConfigWizard(providerRegistry: PulsarAdminProviders, context: vscode.ExtensionContext): Promise<void> {
+  public static async showAddClusterConfigWizard(providerRegistry: PulsarAdminProviders, context: vscode.ExtensionContext, treeProvider: PulsarClusterTreeDataProvider): Promise<void> {
     await AddClusterConfigWizard.startWizard(context, providerRegistry);
+    treeProvider.refresh();
   }
 
   @trace('Remove Saved Config')
-  public static async removeSavedConfig(pulsarAdminProviderNode: PulsarAdminProviderNode): Promise<void> {
+  public static async removeSavedConfig(pulsarAdminProviderNode: PulsarAdminProviderNode, treeProvider: PulsarClusterTreeDataProvider): Promise<void> {
     const configs = ConfigurationProvider.getClusterConfigs() as TSavedProviderConfig[];
     const config: TSavedProviderConfig | undefined = configs.find((value) => value.providerId === pulsarAdminProviderNode.providerConfig.config.providerId );
 
@@ -23,6 +25,7 @@ export class ConfigController {
     }
 
     await ConfigurationProvider.removeClusterConfig(config);
+    treeProvider.refresh();
   }
 
 }

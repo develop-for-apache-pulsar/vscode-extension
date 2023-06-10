@@ -47,14 +47,14 @@ export class ClusterConfigBuilder {
     throw new Error("Check the format of the URL, it could not be validated.");
   }
 
-  public initCluster(clusterName: string, brokerServiceUrl: string, webServiceUrl: string, clusterVersion?: string): TPulsarAdminProviderCluster {
+  public initCluster(clusterName: string, brokerServiceUrl: string, webServiceUrl: string, clusterVersion?: string, webSocketUrl?: string): TPulsarAdminProviderCluster {
     return new class implements TPulsarAdminProviderCluster {
       name: string = clusterName;
       brokerServiceUrl?: string = brokerServiceUrl;
       pulsarVersion?: string = clusterVersion;
       tenants: TPulsarAdminProviderTenant[] = [];
       webServiceUrl: string = webServiceUrl;
-      websocketUrl?: string;
+      websocketUrl?: string = webSocketUrl;
     };
   }
 

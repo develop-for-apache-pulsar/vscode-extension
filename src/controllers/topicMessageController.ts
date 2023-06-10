@@ -2,6 +2,7 @@ import {TopicMessageEditorProvider} from "../providers/topicMessageEditorProvide
 import * as vscode from "vscode";
 import {TopicNode} from "../providers/pulsarClusterTreeDataProvider/nodes/topic";
 import * as Constants from "../common/constants";
+import * as path from "path";
 
 export default class TopicMessageController {
   public static createTopicMessageEditorProvider(context: vscode.ExtensionContext): TopicMessageEditorProvider {
@@ -9,11 +10,17 @@ export default class TopicMessageController {
   }
 
   static async watchTopicMessages(topicNode: TopicNode, context: vscode.ExtensionContext): Promise<void> {
-    const t = topicNode.topicData;
+    const virtualFilePath = path.join(topicNode.pulsarAdmin.providerTypeName,
+      topicNode.clusterName,
+      topicNode.tenantName,
+      topicNode.namespaceName,
+      topicNode.topicType,
+      `${topicNode.label}.pulsar`
+    );
 
     const uri = vscode.Uri.from({
       scheme: 'untitled',
-      path: `${t.providerTypeName}/${t.clusterName}/${t.tenantName}/${t.namespaceName}/${t.type.toLowerCase()}/${t.name}.pulsar`
+      path: virtualFilePath.toLowerCase()
     });
 
     vscode.commands.executeCommand('vscode.openWith', uri, Constants.TOPIC_MESSAGE_CUSTOM_EDITOR_VIEW_TYPE);

@@ -31,10 +31,10 @@ export class Settings implements TProviderSettings {
             this.pulsarAdminProvider = new Provider(webServiceUrl) as TPulsarAdmin;
 
             const needToken = await this.needTokenWithWebServiceUrl(this.pulsarAdminProvider);
-            if (needToken === true) {
+            if (needToken) {
               this.wizard.showPage(this.tokenPage());
             } else {
-              this.wizard.showPage(await this.providerSummaryPage());
+              this.wizard.showPage(this.webSocketUrlPage());
             }
           } catch (err: any) {
             this.wizard.postError(SaveProviderMessageError.needTokenError, err);
@@ -52,8 +52,15 @@ export class Settings implements TProviderSettings {
 
           this.pulsarAdminProvider = new Provider(this.tempCreds.webServiceUrl, pulsarToken) as TPulsarAdmin;
 
-          this.wizard.showPage(await this.providerSummaryPage());
+          this.wizard.showPage(this.webSocketUrlPage());
 
+          break;
+        case SaveProviderMessageCommand.setWebSocketUrl:
+          if(message.text && message.text.length > 0) {
+            this.wizard.webSocketUrl = message.text as string;
+          }
+
+          this.wizard.showPage(await this.providerSummaryPage());
           break;
         case SaveProviderMessageCommand.cancel:
           this.wizard.dispose();
@@ -119,6 +126,32 @@ export class Settings implements TProviderSettings {
         <button class="btn btn-light" onclick='sendMsg("${SaveProviderMessageCommand.cancel}","")'>Cancel</button>
         </div>
         </div>`;
+    }
+
+    private webSocketUrlPage(): string {
+      return `
+        <div class="row h-75">
+          <div class="col-12 align-self-center text-center"><h4>Optionally, provide the cluster's web socket url. This is not required but quite a few feaures will be disabled without it.</h4></div>
+          <div class="offset-2 col-8 text-center">
+              <div class="input-group mb-3">
+                <div class="input-group-prepend">
+                  <span class="input-group-text" id="basic-addon1">&nbsp;</span>
+                </div>
+                <input type="text" id="webSocketUrl" class="form-control" value="ws://localhost:8080" aria-label="webSocketUrl" aria-describedby="basic-addon1">
+              </div>
+          </div>
+          <div class="col-2 text-center">&nbsp;</div>
+        </div>
+        <div class="row h-25 align-items-center">
+          <div class="offset-4 col-2">
+              <button class="btn btn-primary btn-lg" onclick='sendMsg("${SaveProviderMessageCommand.setWebSocketUrl}",document.getElementById("webSocketUrl").value)'>Next >></button>
+            </div>
+          <div class="col-2">
+              <button class="btn btn-secondary btn-lg" onclick='sendMsg("${SaveProviderMessageCommand.cancel}","")'>Cancel</button>
+          </div>
+          <div class="col-4">&nbsp;</div>
+        </div>\`;
+      `;
     }
 
     private buildTenantCheckItem(clusterName: string, tenantName: string) {
@@ -224,6 +257,8 @@ enum SaveProviderMessageCommand {
   cancel = 'cancel',
   setToken = 'setToken',
   setConfigName = 'setConfigName',
+
+  setWebSocketUrl = 'setWebSocketUrl',
 }
 
 enum SaveProviderMessageError {
