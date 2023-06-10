@@ -52,20 +52,20 @@ export class PulsarClusterTreeDataProvider implements vscode.TreeDataProvider<TA
         const namespace = parent as INamespaceNode;
         // Build a tree of all the namespaced objects
         return [
-          new FolderNode(namespace.pulsarAdmin, 'Topics', ExplorerFolderTypes.topicFolder, namespace.tenantName, namespace.label),
-          new FolderNode(namespace.pulsarAdmin, 'Connectors', ExplorerFolderTypes.connectorFolder, namespace.tenantName, namespace.label),
-          new FolderNode(namespace.pulsarAdmin, 'Functions', ExplorerFolderTypes.functionFolder, namespace.tenantName, namespace.label),
+          new FolderNode(namespace.pulsarAdmin, 'Topics', ExplorerFolderTypes.topicFolder, namespace.tenantName, namespace.label, namespace.providerTypeName, namespace.clusterName),
+          new FolderNode(namespace.pulsarAdmin, 'Connectors', ExplorerFolderTypes.connectorFolder, namespace.tenantName, namespace.label, namespace.providerTypeName, namespace.clusterName),
+          new FolderNode(namespace.pulsarAdmin, 'Functions', ExplorerFolderTypes.functionFolder, namespace.tenantName, namespace.label, namespace.providerTypeName, namespace.clusterName),
         ];
       case CONTEXT_VALUES.folder:
         const folderNode = parent as FolderNode;
 
         switch (folderNode.folderType) {
           case ExplorerFolderTypes.topicFolder:
-            return new TopicTree(folderNode.pulsarAdmin).getChildren(folderNode.tenantName, folderNode.namespace);
+            return new TopicTree(folderNode.pulsarAdmin).getChildren(folderNode.tenantName, folderNode.namespace, folderNode.providerTypeName, folderNode.clusterName);
           case ExplorerFolderTypes.connectorFolder:
             return [
-              new FolderNode(folderNode.pulsarAdmin, 'Sources', ExplorerFolderTypes.sourceFolder, folderNode.tenantName, folderNode.namespace),
-              new FolderNode(folderNode.pulsarAdmin, 'Sinks', ExplorerFolderTypes.sinkFolder, folderNode.tenantName, folderNode.namespace),
+              new FolderNode(folderNode.pulsarAdmin, 'Sources', ExplorerFolderTypes.sourceFolder, folderNode.tenantName, folderNode.namespace, folderNode.providerTypeName, folderNode.clusterName),
+              new FolderNode(folderNode.pulsarAdmin, 'Sinks', ExplorerFolderTypes.sinkFolder, folderNode.tenantName, folderNode.namespace, folderNode.providerTypeName, folderNode.clusterName),
             ];
           case ExplorerFolderTypes.sourceFolder:
             return new ConnectorSourceTree(folderNode.pulsarAdmin).getChildren(folderNode.tenantName, folderNode.namespace);

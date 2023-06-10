@@ -1,10 +1,10 @@
 import * as vscode from "vscode";
 import {Uri} from "vscode";
-import {TWizardMessage} from "../types/tWizardMessage";
+import {TWebviewMessage} from "../types/tWebviewMessage";
 
 export class Wizard{
   private webPanel: vscode.WebviewPanel | undefined = undefined;
-  private _receivedMessageCallback: Function = (message: TWizardMessage) => {};
+  private _receivedMessageCallback: Function = (message: TWebviewMessage) => {};
   private _stateChangeCallback: Function = (e: vscode.WebviewPanelOnDidChangeViewStateEvent) => {};
   private extensionUri: Uri;
 
@@ -54,7 +54,7 @@ export class Wizard{
     );
 
     this.webPanel.webview.onDidReceiveMessage(
-      (message: TWizardMessage) => { this._receivedMessageCallback(message); },
+      (message: TWebviewMessage) => { this._receivedMessageCallback(message); },
       undefined,
       context.subscriptions
     );
@@ -85,7 +85,7 @@ export class Wizard{
   }
 
   private buildWebview(content: string): string {
-    const scriptPathOnDisk = vscode.Uri.joinPath(this.extensionUri, 'scripts','script.js');
+    const scriptPathOnDisk = vscode.Uri.joinPath(this.extensionUri, 'scripts','addProvider.js');
     const scriptUri = this.webPanel?.webview.asWebviewUri(scriptPathOnDisk);
     const stylePath = vscode.Uri.joinPath(this.extensionUri, 'styles','bootstrap.min.css');
     const stylesUri = this.webPanel?.webview.asWebviewUri(stylePath);

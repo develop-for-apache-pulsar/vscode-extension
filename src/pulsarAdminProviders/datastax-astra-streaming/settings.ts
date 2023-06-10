@@ -190,7 +190,8 @@ export class Settings implements TProviderSettings {
             const cluster: TPulsarAdminProviderCluster = await clusterConfigBuilder.initCluster(clusterName,
               tenantDetails.brokerServiceUrl,
               tenantDetails.webServiceUrl,
-              tenantDetails.pulsarVersion);
+              tenantDetails.pulsarVersion,
+              tenantDetails.websocketUrl);
 
             clusterConfigBuilder.addCluster(cluster);
           } catch (err: any) {

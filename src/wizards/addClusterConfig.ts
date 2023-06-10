@@ -5,7 +5,7 @@ import {TPulsarAdmin} from "../types/tPulsarAdmin";
 import {PulsarAdminProviders, TProviderInfo} from "../pulsarAdminProviders";
 import {TPulsarAdminProviderCluster} from "../types/tPulsarAdminProviderCluster";
 import {trace} from "../utils/traceDecorator";
-import {TWizardMessage} from "../types/tWizardMessage";
+import {TWebviewMessage} from "../types/tWebviewMessage";
 
 enum MessageCommand {
   loaded = 'loaded',
@@ -20,7 +20,7 @@ enum MessageError {
 
 export class AddClusterConfigWizard extends Wizard {
   private clusterConfigBuilder: ClusterConfigBuilder;
-  private tempCreds: { configName: string, webServiceUrl: string, pulsarToken: string, providerTypeName: string };
+  private tempCreds: { configName: string, webServiceUrl: string, pulsarToken: string, providerTypeName: string, webSocketUrl?: string };
   private clusterTenantSeparator: string = "|||";
   private providerWizard: any;
 
@@ -42,7 +42,7 @@ export class AddClusterConfigWizard extends Wizard {
     this.showPage(this.chooseProviderTypePage());
   }
 
-  private async receivedMessage(message: TWizardMessage): Promise<void> {
+  private async receivedMessage(message: TWebviewMessage): Promise<void> {
     switch (message.command) {
       case MessageCommand.loaded:
         // no op
@@ -76,6 +76,10 @@ export class AddClusterConfigWizard extends Wizard {
 
   set configName(configName: string) {
     this.tempCreds.configName = configName;
+  }
+
+  set webSocketUrl(webSocketUrl: string) {
+    this.tempCreds.webSocketUrl = webSocketUrl;
   }
 
   @trace('Save cluster config')
@@ -114,10 +118,12 @@ export class AddClusterConfigWizard extends Wizard {
             clusterVersion = "";
           }
 
+          const brokerServiceUrl = (clusterDetails!.tlsAllowInsecureConnection ? clusterDetails!.brokerServiceUrl : clusterDetails!.brokerServiceUrlTls) as string;
           const cluster: TPulsarAdminProviderCluster = await this.clusterConfigBuilder.initCluster(clusterName,
-            (clusterDetails!.tlsAllowInsecureConnection ? clusterDetails!.brokerServiceUrl : clusterDetails!.brokerServiceUrlTls) as string,
-                                                                                              this.tempCreds.webServiceUrl,
-                                                                                              clusterVersion);
+                                                                                                  brokerServiceUrl,
+                                                                                                  this.tempCreds.webServiceUrl,
+                                                                                                  clusterVersion,
+                                                                                                  this.tempCreds.webSocketUrl);
           this.clusterConfigBuilder.addCluster(cluster);
         } catch (err: any) {
           this.postError(MessageError.couldNotSave, err);

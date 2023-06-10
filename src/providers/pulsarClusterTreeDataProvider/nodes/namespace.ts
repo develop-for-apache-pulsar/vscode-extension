@@ -11,10 +11,12 @@ export interface INamespaceNode extends vscode.TreeItem{
   readonly tenantName: string;
   readonly pulsarAdmin: TPulsarAdmin;
   readonly label: string;
+  readonly providerTypeName: string;
+  readonly clusterName: string;
 }
 
 export class NamespaceNode extends vscode.TreeItem implements INamespaceNode {
-  constructor(public readonly pulsarAdmin: TPulsarAdmin, public readonly label: string, public readonly tenantName: string) {
+  constructor(public readonly pulsarAdmin: TPulsarAdmin, public readonly label: string, public readonly providerTypeName: string, public readonly clusterName: string, public readonly tenantName: string) {
     super(label, vscode.TreeItemCollapsibleState.Collapsed);
     this.contextValue = CONTEXT_VALUES.namespace;
     this.description = "namespace";
@@ -36,7 +38,7 @@ export class NamespaceTree {
         }
 
         return namespaceNames.map((namespaceName) => {
-          return new NamespaceNode(tenantNode.tenant.pulsarAdmin, namespaceName, tenantNode.tenant.name);
+          return new NamespaceNode(tenantNode.tenant.pulsarAdmin, namespaceName, tenantNode.providerTypeName, tenantNode.clusterName, tenantNode.tenant.name);
         });
       }).catch((error) => {
         return [new ErrorNode(error)];

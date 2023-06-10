@@ -13,9 +13,13 @@ export const LANGUAGE_SCHEME: string = 'vs-pulsar';
 export const COMMAND_REFRESH_EXPLORER = 'extension.vsDevelopPulsarRefreshExplorer';
 export const COMMAND_ADD_CLUSTER_CONFIG = 'extension.vsDevelopPulsarAddClusterConfig';
 export const COMMAND_REMOVE_CLUSTER_CONFIG = 'extension.vsDevelopPulsarRemoveClusterConfig';
+export const COMMAND_WATCH_TOPIC_MESSAGES = 'extension.vsDevelopPulsarWatchTopicMessages';
 
 // PROVIDERS
 export const PROVIDER_CLUSTER_TREE = 'extension.vsPulsarClusterExplorer';
+export const TOPIC_MESSAGE_CUSTOM_EDITOR_VIEW_TYPE = 'extension.topicMessageView';
+
+
 export const CONTEXT_VALUES = {
   error: 'vsDevelopPulsar.error',
   message: 'vsDevelopPulsar.message',

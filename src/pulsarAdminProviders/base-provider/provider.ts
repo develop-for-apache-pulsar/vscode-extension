@@ -1,6 +1,4 @@
 import { TPulsarAdmin } from "../../types/tPulsarAdmin";
-import {TTopic, TopicType} from "../../types/TTopic";
-
 import PulsarAdmin from "@apache-pulsar/pulsar-admin";
 import {ClusterData} from "@apache-pulsar/pulsar-admin/dist/gen/models/cluster-data";
 import {trace} from "../../utils/traceDecorator";
@@ -8,7 +6,7 @@ import {trace} from "../../utils/traceDecorator";
 export class BaseProvider implements TPulsarAdmin {
   protected readonly client: PulsarAdmin;
 
-  constructor(webServiceUrl: string, pulsarToken: string | undefined) {
+  constructor(public readonly providerTypeName: string, webServiceUrl: string, pulsarToken: string | undefined) {
     if (webServiceUrl === null || webServiceUrl === undefined) {
       throw new Error("Web service url is required");
     }
@@ -89,21 +87,25 @@ export class BaseProvider implements TPulsarAdmin {
   }
 
   @trace('Base: List topics')
-  async ListTopics(tenantName: string, namespaceName: string): Promise<TTopic[]> {
-    return new Promise<TTopic[]>((resolve, reject) => {
-      this.QueryPulsarAdminClient<string[]>(this.client.namespaces().getTopics(tenantName, namespaceName), []).then((topics: string[]) => {
-        const topicData = topics.map((topic: string) => {
-          return new class implements TTopic {
-            Name = topic.split('//')[1].split('/').pop()!;
-            Type = TopicType.Persistent;
-          };
-        });
+  async ListTopicNames(tenantName: string, namespaceName: string): Promise<{type:string, name:string}[]> {
+    const persistentTopics: string[] = await this.QueryPulsarAdminClient<string[]>(this.client.persistentTopic().getList(tenantName, namespaceName), []);
+    const nonPersistentTopics: string[] = await this.QueryPulsarAdminClient<string[]>(this.client.nonPersistentTopic().getList(tenantName, namespaceName), []);
 
-        resolve(topicData);
-      }).catch((err: any) => {
-        reject(err);
-      });
+    const ret: {type: string, name: string}[] = [];
+
+    persistentTopics.forEach((topic: string) => {
+      ret.push({type: 'persistent', name: this.cleanTopicName(topic)});
     });
+
+    nonPersistentTopics.forEach((topic: string) => {
+      ret.push({type: 'non-persistent', name: this.cleanTopicName(topic)});
+    });
+
+    return ret;
+  }
+
+  private cleanTopicName(topicAddress: string): string{
+    return new URL(topicAddress).pathname.split("/")[2];
   }
 
   @trace('Base: List connector sink names')
@@ -119,6 +121,11 @@ export class BaseProvider implements TPulsarAdmin {
   @trace('Base: List function names')
   async ListFunctionNames(tenantName: string, namespaceName: string): Promise<string[]> {
     return this.QueryPulsarAdminClient<string[]>(this.client.functions().list(tenantName, namespaceName), []);
+  }
+
+  @trace('Base: Get topic schema')
+  async GetTopicSchema(tenantName: string, namespaceName: string, topicName: string): Promise<string | undefined> {
+    return this.QueryPulsarAdminClient<string | undefined>(this.client.schemas().get(tenantName, namespaceName, topicName), undefined);
   }
 }
 

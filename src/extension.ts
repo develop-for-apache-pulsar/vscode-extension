@@ -7,6 +7,9 @@ import {ConfigController} from "./controllers/configController";
 import {PulsarAdminProviders} from "./pulsarAdminProviders";
 import * as Constants from "./common/constants";
 import Telemetry from "./utils/telemetry";
+import TopicMessageController from "./controllers/topicMessageController";
+import {TopicNode} from "./providers/pulsarClusterTreeDataProvider/nodes/topic";
+import {PulsarAdminProviderNode} from "./providers/pulsarClusterTreeDataProvider/nodes/pulsarAdminProvider";
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -23,9 +26,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 	const subscriptions = [
 		vscode.window.registerTreeDataProvider(Constants.PROVIDER_CLUSTER_TREE, pulsarClusterTreeProvider),
 
-		registerCommand(Constants.COMMAND_REMOVE_CLUSTER_CONFIG, ConfigController.removeSavedConfig),
+		registerCommand(Constants.COMMAND_REMOVE_CLUSTER_CONFIG, (explorerName: PulsarAdminProviderNode) => ConfigController.removeSavedConfig(explorerName, pulsarClusterTreeProvider)),
 		registerCommand(Constants.COMMAND_REFRESH_EXPLORER, () => TreeExplorerController.refreshTreeProvider(pulsarClusterTreeProvider)),
-		registerCommand(Constants.COMMAND_ADD_CLUSTER_CONFIG, () => ConfigController.showAddClusterConfigWizard(providerRegistry, context)),
+		registerCommand(Constants.COMMAND_ADD_CLUSTER_CONFIG, () => ConfigController.showAddClusterConfigWizard(providerRegistry, context, pulsarClusterTreeProvider)),
+		registerReadonlyEditorProvider(Constants.TOPIC_MESSAGE_CUSTOM_EDITOR_VIEW_TYPE, TopicMessageController.createTopicMessageEditorProvider(context)),
+		registerCommand(Constants.COMMAND_WATCH_TOPIC_MESSAGES, (explorerNode: TopicNode) => TopicMessageController.watchTopicMessages(explorerNode, context)),
+
 		Telemetry.initialize(),
 	];
 
@@ -39,7 +45,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 // This method is called when your extension is deactivated
 export function deactivate(): void  {}
 
-
 function registerCommand(command: string, callback: (...args: any[]) => any): vscode.Disposable {
-	return vscode.commands.registerCommand(command, (...args: any[]) => { try{ callback(...args); }catch(e: any){ Telemetry.sendError(e); throw e; } });
+	return vscode.commands.registerCommand(command, (...args: any[]) => { callback(...args); });
+}
+
+function registerReadonlyEditorProvider(viewType: string, provider: vscode.CustomReadonlyEditorProvider): vscode.Disposable {
+	return vscode.window.registerCustomEditorProvider(viewType, provider);
 }
