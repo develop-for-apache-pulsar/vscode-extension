@@ -2,7 +2,7 @@
   "name": "develop-for-apache-pulsar",
   "displayName": "Develop for Apache Pulsar",
   "description": "Develop applications that use Apache Pulsar",
-  "version": "0.1.0-alpha.0",
+  "version": "0.1.0-alpha.1",
   "publisher": "Pulsar Community",
   "engines": {
     "vscode": "^1.77.0"
