@@ -170,6 +170,11 @@
           "command": "extension.vsDevelopPulsarWatchTopicMessages",
           "when": "view == extension.vsPulsarClusterExplorer && viewItem == vsDevelopPulsar.topic",
           "group": "0@1"
+        },
+        {
+          "command": "extension.vsDevelopPulsarCreateTopic",
+          "when": "view == extension.vsPulsarClusterExplorer && viewItem == vsDevelopPulsar.namespace",
+          "group": "0@1"
         }
       ]
     },
@@ -194,6 +199,11 @@
       {
         "command": "extension.vsDevelopPulsarWatchTopicMessages",
         "title": "Watch messages",
+        "category": "DevelopPulsar"
+      },
+      {
+        "command": "extension.vsDevelopPulsarCreateTopic",
+        "title": "Create topic",
         "category": "DevelopPulsar"
       }
     ]

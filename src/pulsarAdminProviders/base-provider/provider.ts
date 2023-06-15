@@ -2,6 +2,8 @@ import { TPulsarAdmin } from "../../types/tPulsarAdmin";
 import PulsarAdmin from "@apache-pulsar/pulsar-admin";
 import {ClusterData} from "@apache-pulsar/pulsar-admin/dist/gen/models/cluster-data";
 import {trace} from "../../utils/traceDecorator";
+import {PartitionedTopicMetadata} from "@apache-pulsar/pulsar-admin/dist/gen/models";
+import {AxiosResponse} from "axios";
 
 export class BaseProvider implements TPulsarAdmin {
   protected readonly client: PulsarAdmin;
@@ -26,7 +28,7 @@ export class BaseProvider implements TPulsarAdmin {
   protected async QueryPulsarAdminClient<T>(fn: Promise<any>, def: T): Promise<T> {
     return new Promise((resolve, reject) => {
       fn.then((response: any) => {
-        if (response.status === 200) {
+        if (response.status > 199 && response.status < 300) {
           resolve(response.data);
           return;
         }
@@ -126,6 +128,29 @@ export class BaseProvider implements TPulsarAdmin {
   @trace('Base: Get topic schema')
   async GetTopicSchema(tenantName: string, namespaceName: string, topicName: string): Promise<string | undefined> {
     return this.QueryPulsarAdminClient<string | undefined>(this.client.schemas().get(tenantName, namespaceName, topicName), undefined);
+  }
+
+  @trace('Base: Create persistent topic')
+  async CreatePersistentTopic(tenantName: string, namespaceName: string, topicName: string, numPartitions: number = 0, metadata: {[p: string]: string} | undefined = undefined): Promise<undefined> {
+    if(numPartitions < 1) {
+      return this.QueryPulsarAdminClient<undefined>(this.client.persistentTopic().createNonPartitionedTopic(tenantName, namespaceName, topicName, undefined, metadata), undefined);
+    }
+
+    return this.QueryPulsarAdminClient<undefined>(this.client.persistentTopic().createPartitionedTopic(tenantName, namespaceName, topicName, numPartitions), undefined);
+  }
+
+  @trace('Base: Create non-persistent topic')
+  async CreateNonPersistentTopic(tenantName: string, namespaceName: string, topicName: string, numPartitions: number = 0, metadata: {[p: string]: string} | undefined = undefined): Promise<undefined> {
+    if(numPartitions < 1) {
+      return this.QueryPulsarAdminClient<undefined>(this.client.nonPersistentTopic().createNonPartitionedTopic(tenantName, namespaceName, topicName, undefined, metadata), undefined);
+    }
+
+    const partitionedTopicMetadata = new class implements PartitionedTopicMetadata {
+      partitions: number = numPartitions;
+      properties: {[p: string]: string} = metadata || {};
+    };
+
+    return this.QueryPulsarAdminClient<undefined>(this.client.nonPersistentTopic().createPartitionedTopic(tenantName, namespaceName, topicName, partitionedTopicMetadata), undefined);
   }
 }
 

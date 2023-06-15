@@ -10,6 +10,8 @@ import Telemetry from "./utils/telemetry";
 import TopicMessageController from "./controllers/topicMessageController";
 import {TopicNode} from "./providers/pulsarClusterTreeDataProvider/nodes/topic";
 import {PulsarAdminProviderNode} from "./providers/pulsarClusterTreeDataProvider/nodes/pulsarAdminProvider";
+import {NamespaceNode} from "./providers/pulsarClusterTreeDataProvider/nodes/namespace";
+import TopicController from "./controllers/topicController";
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -31,6 +33,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 		registerCommand(Constants.COMMAND_ADD_CLUSTER_CONFIG, () => ConfigController.showAddClusterConfigWizard(providerRegistry, context, pulsarClusterTreeProvider)),
 		registerReadonlyEditorProvider(Constants.TOPIC_MESSAGE_CUSTOM_EDITOR_VIEW_TYPE, TopicMessageController.createTopicMessageEditorProvider(context)),
 		registerCommand(Constants.COMMAND_WATCH_TOPIC_MESSAGES, (explorerNode: TopicNode) => TopicMessageController.watchTopicMessages(explorerNode, context)),
+		registerCommand(Constants.COMMAND_CREATE_TOPIC, (explorerNode: NamespaceNode) => TopicController.showNewTopicWizard(explorerNode, context, pulsarClusterTreeProvider)),
 
 		Telemetry.initialize(),
 	];
