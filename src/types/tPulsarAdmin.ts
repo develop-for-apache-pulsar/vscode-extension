@@ -21,6 +21,10 @@ export type TPulsarAdmin = {
   GetClusterDetails(clusterName: string): Promise<ClusterData | undefined>;
 
   GetTopicSchema(tenantName: string, namespaceName: string, topicName: string): Promise<string | undefined>;
+
+  CreatePersistentTopic(tenantName: string, namespaceName: string, topicName: string, numPartitions: number, metadata: {[p: string]: string} | undefined): Promise<undefined>;
+
+  CreateNonPersistentTopic(tenantName: string, namespaceName: string, topicName: string, numPartitions: number, metadata: {[p: string]: string} | undefined): Promise<undefined>;
 };
 
 

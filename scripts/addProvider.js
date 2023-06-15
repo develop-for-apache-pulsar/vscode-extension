@@ -36,3 +36,27 @@ function buildClusterTenants(){
   const data = [...document.querySelectorAll("input[type='checkbox']:checked")].map(e => e.value);
   return data;
 }
+
+function buildProperties(rowsParent){
+  let data = {};
+  rowsParent.childNodes.forEach(row => {
+    const label = row.querySelector("input[name^='label']").value;
+    const value = row.querySelector("input[name^='value']").value;
+    if(label && value){
+      data[label] = value;
+    }
+  });
+  return data;
+}
+
+function appendLabelValueRow(rowsParent){
+  const rowCount = rowsParent.childElementCount++;
+
+  const newRowNode = document.createElement('tr');
+  newRowNode.id = `labelValue${rowCount}`;
+  newRowNode.innerHTML = `<td><input type="text" class="form-control" placeholder="label" aria-label="label" name="label${rowCount}"></td>
+<td><input type="text" class="form-control" placeholder="value" aria-label="value" name="value${rowCount}"></td>
+<td><button type="button" class="btn btn-danger btn-lg" title="Remove" onclick="document.getElementById('labelValue${rowCount}').remove()">-</button></td>`;
+
+  rowsParent.appendChild(newRowNode);
+}
