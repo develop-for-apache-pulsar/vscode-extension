@@ -12,12 +12,12 @@ export default class Telemetry {
   }
 
   public static sendEvent(eventName: string, properties?: { [key: string]: string }) {
-    //try {
+    try {
       if (vscode.env.isTelemetryEnabled) {
         this.reporter.sendTelemetryEvent(eventName, properties);
       }
-   // } catch {
-    //}
+   } catch {
+    }
   }
 
   public static sendError(error: Error) {
