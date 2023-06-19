@@ -6,16 +6,21 @@ import {PulsarAdminProviderNode} from "../providers/pulsarClusterTreeDataProvide
 import {PulsarAdminProviders} from "../pulsarAdminProviders";
 import {trace} from "../utils/traceDecorator";
 import {PulsarClusterTreeDataProvider} from "../providers/pulsarClusterTreeDataProvider/explorer";
+import {TreeExplorerController} from "./treeExplorerController";
 
 export class ConfigController {
   @trace('Show Add Cluster Config Wizard')
-  public static async showAddClusterConfigWizard(providerRegistry: PulsarAdminProviders, context: vscode.ExtensionContext, treeProvider: PulsarClusterTreeDataProvider): Promise<void> {
-    await AddClusterConfigWizard.startWizard(context, providerRegistry);
-    treeProvider.refresh();
+  public static showAddClusterConfigWizard(providerRegistry: PulsarAdminProviders,
+                                                 context: vscode.ExtensionContext,
+                                                 treeProvider: PulsarClusterTreeDataProvider): void {
+    AddClusterConfigWizard.startWizard(context, providerRegistry, () => {
+      vscode.window.showInformationMessage(`Cluster saved successfully`);
+      TreeExplorerController.refreshTreeProvider(treeProvider);
+    });
   }
 
   @trace('Remove Saved Config')
-  public static async removeSavedConfig(pulsarAdminProviderNode: PulsarAdminProviderNode, treeProvider: PulsarClusterTreeDataProvider): Promise<void> {
+  public static removeSavedConfig(pulsarAdminProviderNode: PulsarAdminProviderNode, treeProvider: PulsarClusterTreeDataProvider): void {
     const configs = ConfigurationProvider.getClusterConfigs() as TSavedProviderConfig[];
     const config: TSavedProviderConfig | undefined = configs.find((value) => value.providerId === pulsarAdminProviderNode.providerConfig.config.providerId );
 
@@ -24,8 +29,10 @@ export class ConfigController {
       return;
     }
 
-    await ConfigurationProvider.removeClusterConfig(config);
-    treeProvider.refresh();
+    ConfigurationProvider.removeClusterConfig(config).then(() => {
+      vscode.window.showInformationMessage(`Cluster removed successfully`);
+      TreeExplorerController.refreshTreeProvider(treeProvider);
+    });
   }
 
 }

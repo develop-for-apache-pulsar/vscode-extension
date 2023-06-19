@@ -61,7 +61,11 @@ export default class ConfigurationProvider {
     await vscode.workspace.getConfiguration().update(EXTENSION_CONFIG_KEY, newValue, scope);
   }
 
-  private static async removeValueFromConfigArrayAtScope(configKey: string, removeIndex: number, scope: vscode.ConfigurationTarget, valueAtScope: any, createIfNotExist: boolean): Promise<void> {
+  private static async removeValueFromConfigArrayAtScope(configKey: string,
+                                                         removeIndex: number,
+                                                         scope: vscode.ConfigurationTarget,
+                                                         valueAtScope: any,
+                                                         createIfNotExist: boolean): Promise<void> {
     if (!createIfNotExist) {
       if (!valueAtScope || !(valueAtScope[configKey])) {
         return;

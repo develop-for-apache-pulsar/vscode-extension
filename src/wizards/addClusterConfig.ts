@@ -24,7 +24,7 @@ export class AddClusterConfigWizard extends Wizard {
   private clusterTenantSeparator: string = "|||";
   private providerWizard: any;
 
-  constructor(context: vscode.ExtensionContext, private readonly providerRegistry: PulsarAdminProviders) {
+  constructor(context: vscode.ExtensionContext, private readonly providerRegistry: PulsarAdminProviders, private readonly successCallback?: () => void) {
     super(context, "addClusterConfig", "Save Cluster Configuration");
     this.receivedMessageCallback = this.receivedMessage;
 
@@ -33,8 +33,10 @@ export class AddClusterConfigWizard extends Wizard {
   }
 
   @trace('Start add cluster config wizard')
-  public static startWizard(context: vscode.ExtensionContext, providerRegistry: PulsarAdminProviders) {
-    const wizard = new AddClusterConfigWizard(context, providerRegistry);
+  public static startWizard(context: vscode.ExtensionContext,
+                            providerRegistry: PulsarAdminProviders,
+                            successCallback?: () => void) {
+    const wizard = new AddClusterConfigWizard(context, providerRegistry, successCallback);
     wizard.showWizardStartPage();
   }
 
@@ -141,6 +143,10 @@ export class AddClusterConfigWizard extends Wizard {
     //TODO: what if they all errored out?
     try{
       await this.clusterConfigBuilder.saveConfig();
+
+      if(this.successCallback !== undefined) {
+        this.successCallback();
+      }
     } catch (err: any) {
       this.postError(MessageError.couldNotSave, err);
       return;

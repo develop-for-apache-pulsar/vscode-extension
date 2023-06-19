@@ -21,8 +21,6 @@ const extensionConfig = {
   },
   externals: {
     vscode: 'commonjs vscode', // the vscode-module is created on-the-fly and must be excluded. Add other modules that cannot be webpack'ed, 📖 -> https://webpack.js.org/configuration/externals/
-    applicationinsights: 'applicationinsights', // ignored because we don't ship native module
-    "isomorphic-ws": "isomorphic-ws",
   },
   resolve: {
     // support reading TypeScript and JavaScript files, 📖 -> https://github.com/TypeStrong/ts-loader
