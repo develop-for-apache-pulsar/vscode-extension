@@ -136,7 +136,7 @@
     "viewsWelcome": [
       {
         "view": "extension.vsPulsarClusterExplorer",
-        "contents": "You have no saved clusters.\n[Add a provider](command:extension.vsDevelopPulsarAddClusterConfig)\nTo learn more about how to get started [read our docs](https://github.com/pulsar-admin-clients/vscode-extension)."
+        "contents": "You have no saved clusters.\n[Add a provider](command:extension.vsDevelopPulsarAddClusterConfig)\nTo learn more about how to get started [visit the GitHub repo](https://github.com/develop-for-apache-pulsar/vscode-extension)."
       }
     ],
     "viewsContainers": {
