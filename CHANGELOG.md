@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Schema lookup on topic
 - Watch multiple topics in different tabs
 
+### Removed
+
+- Websocket reader class (it was making things more complicated than they needed to be)
+
 Contributors: ddieruf
 
 ## [0.1.0]
@@ -44,7 +48,7 @@ Contributors: ddieruf
 
 - Pulsar websocket reader
 - Topic message editor provider
-- Custon editor and language definition for .pulsar files
+- Custom editor and language definition for .pulsar files
 - Added websocket option to cluster onboarding wizard
 
 ### Changed
