@@ -18,7 +18,7 @@ export class Settings implements TProviderSettings {
     private streamingTenants: TStreamingTenantDetails[] = [];
     private configName: string = "";
 
-    constructor(private readonly wizard: any) {
+    constructor(private readonly wizard: any, private readonly successCallback?: () => void) {
     }
 
     public startWizard(): string {
@@ -94,7 +94,7 @@ export class Settings implements TProviderSettings {
           clustersAndTenants.find((clusterAndTenants) => clusterAndTenants[0] === streamingTenant.clusterName)![1].push(streamingTenant.tenantName);
         }
       } catch (err: any) {
-        console.error(err);
+        console.log(err);
         this.wizard.postMessage(SaveProviderMessageError.pulsarAdminError, err.message);
       }
 
@@ -211,6 +211,10 @@ export class Settings implements TProviderSettings {
       //TODO: what if they all errored out?
       try {
         await clusterConfigBuilder.saveConfig();
+
+        if(this.successCallback !== undefined) {
+          this.successCallback();
+        }
       } catch (err: any) {
         this.wizard.postError(SaveProviderMessageError.couldNotSave, err);
         return;

@@ -2,8 +2,7 @@ import { TPulsarAdmin } from "../../types/tPulsarAdmin";
 import PulsarAdmin from "@apache-pulsar/pulsar-admin";
 import {ClusterData} from "@apache-pulsar/pulsar-admin/dist/gen/models/cluster-data";
 import {trace} from "../../utils/traceDecorator";
-import {PartitionedTopicMetadata} from "@apache-pulsar/pulsar-admin/dist/gen/models";
-import {AxiosResponse} from "axios";
+import {GetSchemaResponse, PartitionedTopicMetadata} from "@apache-pulsar/pulsar-admin/dist/gen/models";
 
 export class BaseProvider implements TPulsarAdmin {
   protected readonly client: PulsarAdmin;
@@ -36,14 +35,12 @@ export class BaseProvider implements TPulsarAdmin {
         reject(response);
       }).catch((err: any) => {
         if(this.shouldRejectError(err)) {
-          console.debug("Request rejected");
-          console.error(err);
-
+          console.log("Request rejected");
           reject(err);
           return;
         }
 
-        console.debug("Request not rejected, returning default value");
+        console.log("Request not rejected, returning default value");
         resolve(def);
       });
     });
@@ -126,8 +123,21 @@ export class BaseProvider implements TPulsarAdmin {
   }
 
   @trace('Base: Get topic schema')
-  async GetTopicSchema(tenantName: string, namespaceName: string, topicName: string): Promise<string | undefined> {
-    return this.QueryPulsarAdminClient<string | undefined>(this.client.schemas().get(tenantName, namespaceName, topicName), undefined);
+  async GetTopicSchema(tenantName: string, namespaceName: string, topicName: string): Promise<GetSchemaResponse | undefined> {
+    return new Promise<GetSchemaResponse | undefined>((resolve, reject) => {
+      this.QueryPulsarAdminClient<GetSchemaResponse | undefined>(this.client.schemas().get(tenantName, namespaceName, topicName), undefined)
+        .then((schema: GetSchemaResponse | undefined) => {
+          resolve(schema);
+        })
+        .catch((err: any) => {
+          if(err.response.status === 404 && err.response.data.message === 'Schema not found'){
+            resolve(undefined);
+            return;
+          }
+
+          reject(err);
+        });
+    });
   }
 
   @trace('Base: Create persistent topic')

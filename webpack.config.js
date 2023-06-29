@@ -55,7 +55,7 @@ if(process.env.NODE_ENV === "production"){
       extractComments: false,
       terserOptions: {
         compress: {
-          pure_funcs: ['console.debug', 'console.info']
+          pure_funcs: ['console.debug', 'console.info', 'console.log', 'console.warn']
         },
       },
     })],

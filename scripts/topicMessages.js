@@ -8,30 +8,45 @@ if (bodyTheme) {
   }
 }
 
-let messagesList;
+let messageManager;
+
+function sendMsg(command, text) {
+  vscode.postMessage({ command: command, text: text });
+}
 
 window.addEventListener('message', event => {
-  //console.log(event);
+  console.log("message");
+  console.log(event);
 
-  const message = event.data; // The JSON data our extension sent
+  const messageData = event.data; // The JSON data our extension sent
 
-  if(!message.command){ //it's a topic message
-    messagesList.add(message);
+  if(!messageData.command && messageData.publishTime && messageData.messageId){ //it's a topic message
+    messageManager.add(messageData);
     return;
   }
 
-  switch (message.command) {
+  if(!messageData.text){
+    return;
+  }
+
+  switch (messageData.command) {
     case 'error':
-      messagesList.showError(message.text);
+      messageManager.showError(messageData.text);
       break;
-    case 'close':
+    case 'connection':
+      document.getElementById('websocketStatus').innerText = messageData.text;
       break;
     default: // info
-      messagesList.showInfo(message.text);
+      messageManager.showInfo(messageData.text);
       break;
   }
 });
 
 window.addEventListener('load', event => {
-  messagesList = new MessageManager();
+  console.log("Load");
+  console.log(event);
+
+  messageManager = new MessageManager();
+
+  sendMsg("ready");
 });
