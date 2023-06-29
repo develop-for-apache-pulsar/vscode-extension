@@ -182,7 +182,7 @@ export class Settings implements TProviderSettings {
           clustersAndTenants.push([clusterName,tenantNames]);
         }
       } catch (err: any) {
-        console.error(err);
+        console.log(err);
         this.wizard.postMessage(SaveProviderMessageError.pulsarAdminError, err.message);
       }
 

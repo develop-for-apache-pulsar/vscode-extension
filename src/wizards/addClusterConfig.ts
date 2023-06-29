@@ -54,7 +54,7 @@ export class AddClusterConfigWizard extends Wizard {
         this.tempCreds.providerTypeName = providerTypeName;
 
         const providerSettings = this.providerRegistry.getProvider(providerTypeName);
-        this.providerWizard = new providerSettings.saveProviderWizard(this);
+        this.providerWizard = new providerSettings.saveProviderWizard(this, this.successCallback);
         this.showPage(this.providerWizard.startWizard());
 
         break;

@@ -15,6 +15,7 @@ export const COMMAND_ADD_CLUSTER_CONFIG = 'extension.vsDevelopPulsarAddClusterCo
 export const COMMAND_REMOVE_CLUSTER_CONFIG = 'extension.vsDevelopPulsarRemoveClusterConfig';
 export const COMMAND_WATCH_TOPIC_MESSAGES = 'extension.vsDevelopPulsarWatchTopicMessages';
 export let COMMAND_CREATE_TOPIC = 'extension.vsDevelopPulsarCreateTopic';
+export let COMMAND_SHOW_TOPIC_SCHEMA = 'extension.vsDevelopPulsarShowTopicSchema';
 
 // PROVIDERS
 export const PROVIDER_CLUSTER_TREE = 'extension.vsPulsarClusterExplorer';

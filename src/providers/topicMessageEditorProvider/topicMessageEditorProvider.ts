@@ -1,79 +1,109 @@
 import * as vscode from "vscode";
 import TopicMessagesDocument from "./topicMessagesDocument";
-import WebSocketReader from "../../pulsarWebSocketReader/webSocketReader";
-import {AllMessageTypes} from "../../types/allMessageTypes";
-import ReaderMessage from "../../pulsarWebSocketReader/readerMessage";
 import {WebviewPanel} from "vscode";
-import TopicMessage from "../../pulsarWebSocketReader/topicMessage";
+import {TWebviewMessage} from "../../types/tWebviewMessage";
+import {ErrorEvent, MessageEvent, WebSocket} from "ws";
+import {TTopicMessage} from "../../types/tTopicMessage";
+import TopicMessage from "./topicMessage";
+import {ClientRequestArgs} from "http";
 
 export class TopicMessageEditorProvider implements vscode.CustomReadonlyEditorProvider<TopicMessagesDocument> {
-  private webSocketReader: WebSocketReader | undefined = undefined;
-
   constructor(private readonly context: vscode.ExtensionContext) {}
 
   public openCustomDocument(uri: vscode.Uri, openContext: vscode.CustomDocumentOpenContext, token: vscode.CancellationToken): Thenable<TopicMessagesDocument> | TopicMessagesDocument {
-    console.debug("Opening custom document: %o", uri);
+    //console.log("Opening custom document: %o", uri);
     return TopicMessagesDocument.create(uri, openContext.backupId); //let vscode catch errors
   }
 
   public async resolveCustomEditor(topicMessagesDocument: TopicMessagesDocument, webviewPanel: vscode.WebviewPanel, token: vscode.CancellationToken): Promise<void> {
-    console.debug("Resolving custom editor: %o", topicMessagesDocument);
-
-    this.webSocketReader = new WebSocketReader(topicMessagesDocument.content.webSocketUrl, topicMessagesDocument.content.pulsarToken, topicMessagesDocument.content.topicSchema);
+    let websocket: WebSocket | undefined = undefined;
+    let webRequestArgs: ClientRequestArgs | undefined = undefined;
 
     webviewPanel.webview.options = {
       enableScripts: true,
-      enableCommandUris: true,
+      enableCommandUris: true
     };
 
-    webviewPanel.onDidChangeViewState(
-      (e: vscode.WebviewPanelOnDidChangeViewStateEvent) => {
-        if(!e.webviewPanel.visible){
-          this.webSocketReader?.pause();
-          return;
-        }
-
-        this.webSocketReader?.resume();
-      },
-      null,
-      this.context.subscriptions
-    );
-
     webviewPanel.onDidDispose(async () => {
-      this.webSocketReader?.close();
-      topicMessagesDocument?.dispose();
-    }, null, this.context.subscriptions);
-
-    webviewPanel.webview.html = this.buildView(webviewPanel, `Topic Messages: ${topicMessagesDocument.content.topicName}`);
-    console.debug("Built panel");
-
-    // Load the existing messages into the web view
-    console.debug("Loading existing messages");
-    topicMessagesDocument.content.messages.forEach((message) => {
-      this.postMessage(webviewPanel, message);
-    });
-
-    this.webSocketReader?.open().subscribe({
-      next: (message: AllMessageTypes) => {
-        this.postMessage(webviewPanel, message);
-
-        if(message.hasOwnProperty("messageId")){
-          message = message as TopicMessage;
-          topicMessagesDocument.content.lastMessageId = message.messageId;
-          topicMessagesDocument.content.addMessage(message);
-        }
-      },
-      error: (error: ReaderMessage) => {
-        this.postMessage(webviewPanel, error);
-      },
-      complete: () => {
-        console.debug("Websocket closed");
+      try{
+        console.log("Close topic " + topicMessagesDocument.content.topicName);
+        websocket?.close();
+      }catch(e){
+        console.log(e);
       }
     });
-  }
 
-  private postMessage(panel: vscode.WebviewPanel, message: AllMessageTypes): void {
-    panel.webview.postMessage(message);
+    token.onCancellationRequested(() => {
+      webviewPanel.dispose();
+    });
+
+    webviewPanel.webview.onDidReceiveMessage((message: TWebviewMessage) => {
+      switch(message.command){
+        case "ready":
+          if(websocket){
+            // The webview has been reset, re-send the messages
+            topicMessagesDocument.content.messages.forEach((message: TTopicMessage) => {
+              webviewPanel.webview.postMessage(message);
+            });
+
+            switch(websocket.readyState){
+              case WebSocket.OPEN:
+                webviewPanel.webview.postMessage({command: "connection", text: "opened"});
+                break;
+              case WebSocket.CLOSED:
+                webviewPanel.webview.postMessage({command: "connection", text: "closed"});
+                break;
+              case WebSocket.CLOSING:
+                webviewPanel.webview.postMessage({command: "connection", text: "closing"});
+                break;
+              case WebSocket.CONNECTING:
+                webviewPanel.webview.postMessage({command: "connection", text: "connecting"});
+                break;
+            }
+
+            break; //The websocket is already open, most likely because the user moved the tab
+          }
+
+          if(topicMessagesDocument.content.pulsarToken !== undefined){
+            webRequestArgs = {
+              headers: {
+                // eslint-disable-next-line @typescript-eslint/naming-convention
+                Authorization: `Bearer ${topicMessagesDocument.content.pulsarToken}`
+              }
+            };
+          }
+
+          websocket = new WebSocket(topicMessagesDocument.content.webSocketUrl, webRequestArgs);
+
+          websocket.onopen = () => {
+            webviewPanel.webview.postMessage({command: "connection", text: "opened"});
+          };
+
+          websocket.onerror = (e: ErrorEvent) => {
+            webviewPanel.webview.postMessage({command: "connection", text: "errored - " + e.message});
+          };
+
+          websocket.onclose = () => {
+            webviewPanel.webview.postMessage({command: "connection", text: "closed"});
+          };
+
+          websocket.onmessage = async (e: MessageEvent) => {
+            const readerMessage: TTopicMessage = TopicMessage.fromWsMessage(e, topicMessagesDocument.content.topicSchema);
+            webviewPanel.webview.postMessage(readerMessage);
+
+            topicMessagesDocument.content.addMessage(readerMessage);
+
+            setTimeout(function timeout() {
+              const ackMsg = {"messageId" : readerMessage.messageId};
+              websocket?.send(JSON.stringify(ackMsg));
+            }, 500);
+          };
+
+          break;
+      }
+    });
+
+    webviewPanel.webview.html = this.buildView(webviewPanel, `Topic Messages: ${topicMessagesDocument.content.topicName}`);
   }
 
   private buildView(panel: WebviewPanel, displayTitle: string): string {
@@ -83,6 +113,8 @@ export class TopicMessageEditorProvider implements vscode.CustomReadonlyEditorPr
     const listMinUri = panel.webview.asWebviewUri(listMinPathOnDisk);
     const topicMrgPathOnDisk = vscode.Uri.joinPath(this.context.extensionUri, 'scripts','messageManager.js');
     const topicMrgUri = panel.webview.asWebviewUri(topicMrgPathOnDisk);
+    const bootstrapJsOnDisk = vscode.Uri.joinPath(this.context.extensionUri, 'scripts','bootstrap.bundle.min.js');
+    const bootstrapJsUri = panel.webview.asWebviewUri(bootstrapJsOnDisk);
     const stylePath = vscode.Uri.joinPath(this.context.extensionUri, 'styles','bootstrap.min.css');
     const stylesUri = panel.webview.asWebviewUri(stylePath);
 
@@ -114,48 +146,59 @@ export class TopicMessageEditorProvider implements vscode.CustomReadonlyEditorPr
              </div>
            </div>
            <div class="row pb-2 border-bottom">
-<div class="col-6">
+<div class="col">
   <div class="card">
       <div class="card-header text-muted">Search</div>
       <div class="card-body p-4">
         <div class="input-group">
-          <span class="input-group-text fs-6" id="message-payload">Message<br />Payload</span>
-          <input type="text" id="search-message-payload" class="form-control" placeholder="" aria-label="" aria-describedby="message-payload" onkeyup="messagesList.search()">
+          <span class="input-group-text fs-6 d-none d-lg-flex" id="message-payload">Message<br />Payload</span>
+          <input type="text" id="search-message-payload" class="form-control" placeholder="" aria-label="" aria-describedby="message-payload" onkeyup="messageManager.search()">
         </div>
       </div>
   </div>
 </div>
-<div class="col-3">
+<div class="col">
   <div class="card">
       <div class="card-header text-muted">Filter</div>
       <div class="card-body p-4 text-center">
-          <div class="btn-group" role="group" aria-label="Message publish date">
-            <input type="radio" class="btn-check" name="publishDate" id="publishDate1h" autocomplete="off" value="1h" onchange="messagesList.filter()">
+          <div class="btn-group d-none d-md-flex" role="group" aria-label="Message publish date">
+            <input type="radio" class="btn-check" name="publishDate" id="publishDate1h" autocomplete="off" value="1h" onchange="messageManager.filter()">
             <label class="btn btn-outline-primary" for="publishDate1h">1h</label>
           
-            <input type="radio" class="btn-check" name="publishDate" id="publishDate3h" autocomplete="off" value="3h" onchange="messagesList.filter()">
+            <input type="radio" class="btn-check" name="publishDate" id="publishDate3h" autocomplete="off" value="3h" onchange="messageManager.filter()">
             <label class="btn btn-outline-primary" for="publishDate3h">3h</label>
           
-            <input type="radio" class="btn-check" name="publishDate" id="publishDate12h" autocomplete="off" value="12h" onchange="messagesList.filter()">
+            <input type="radio" class="btn-check" name="publishDate" id="publishDate12h" autocomplete="off" value="12h" onchange="messageManager.filter()">
             <label class="btn btn-outline-primary" for="publishDate12h">12h</label>
           
-            <input type="radio" class="btn-check" name="publishDate" id="publishDate1d" autocomplete="off" value="1d" onchange="messagesList.filter()">
+            <input type="radio" class="btn-check" name="publishDate" id="publishDate1d" autocomplete="off" value="1d" onchange="messageManager.filter()">
             <label class="btn btn-outline-primary" for="publishDate1d">1d</label>
           
-            <input type="radio" class="btn-check" name="publishDate" id="publishDate1w" autocomplete="off" value="1w" onchange="messagesList.filter()">
+            <input type="radio" class="btn-check" name="publishDate" id="publishDate1w" autocomplete="off" value="1w" onchange="messageManager.filter()">
             <label class="btn btn-outline-primary" for="publishDate1w">1w</label>
           
-            <input type="radio" class="btn-check" name="publishDate" id="publishDateAll" autocomplete="off" value="all" checked onchange="messagesList.filter()">
+            <input type="radio" class="btn-check" name="publishDate" id="publishDateAll" autocomplete="off" value="all" checked onchange="messageManager.filter()">
             <label class="btn btn-outline-primary" for="publishDateAll">All</label>
           </div>
+          
+          <div class="d-md-none" aria-label="Message publish date">
+            <select class="form-select" id="publishDateSelect" onchange="document.getElementById(document.getElementById('publishDateSelect').value).checked = true;messageManager.filter()">
+              <option value="publishDate1h">1h</option>
+              <option value="publishDate3h">3h</option>
+              <option value="publishDate12h">12h</option>
+              <option value="publishDate1d">1d</option>
+              <option value="publishDate1w">1w</option>
+              <option value="publishDateAll" selected>All</option>
+            </select>
+          </div>
           <div class="pt-2 text-center">
-            <input type="checkbox" class="btn-check" id="redeliveredOnly" autocomplete="off" onchange="messagesList.filter()">
+            <input type="checkbox" class="btn-check" id="redeliveredOnly" autocomplete="off" onchange="messageManager.filter()">
             <label class="btn btn-outline-primary" for="redeliveredOnly">Redelivered Only</label>
           </div>
       </div>
   </div>
 </div>
-<div class="col-3">
+<div class="col-lg-3 col-sm col-md d-none d-md-grid">
   <div class="card">
       <div class="card-header text-muted">Info</div>
       <div class="card-body p-2">
@@ -183,6 +226,7 @@ export class TopicMessageEditorProvider implements vscode.CustomReadonlyEditorPr
             <div class="col-12" id="messages-list" class="list-group"><ul class="list"></ul></div>
            </div>
         </div>
+        <script src="${bootstrapJsUri}"></script>
         <script src="${listMinUri}"></script>
         <script src="${topicMrgUri}"></script>
         <script src="${scriptUri}"></script>
