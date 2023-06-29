@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0]
+
+### Fixed
+
+- Websocket connection issues
+- Topic message editor lifecycle
+- Refresh cluster tree when Astra cluster is created
+
+### Added
+
+- Schema lookup on topic
+- Watch multiple topics in different tabs
+
+Contributors: ddieruf
+
 ## [0.1.0]
 
 ### Fixed
@@ -15,7 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Enabled the extension to be installed from the marketplace
-- Added topic creation wizard
+- Topic creation wizard
 
 Contributors: ddieruf
 

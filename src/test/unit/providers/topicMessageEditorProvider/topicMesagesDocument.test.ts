@@ -2,8 +2,8 @@ import {assert, expect} from "chai";
 import TopicMessageDocumentContent from "../../../../providers/topicMessageEditorProvider/topicMessageDocumentContent";
 
 describe("Topic message document content tests", () => {
-  it("should construct new document content", () => {
-    const content = new TopicMessageDocumentContent("providerTypeName",
+  it("should construct new document content", async () => {
+    const content = await TopicMessageDocumentContent.build("providerTypeName",
       "clusterName",
       "tenantName",
       "namespaceName",
@@ -21,7 +21,7 @@ describe("Topic message document content tests", () => {
     assert.equal(content.messages.length, 0);
   });
 
-  it("should construct new document content from json", () => {
+  it("should construct new document content from json", async () => {
     const obj = {
       providerTypeName: "providerTypeName",
       clusterName: "clusterName",
@@ -33,7 +33,7 @@ describe("Topic message document content tests", () => {
       messages: []
     };
 
-    const content = TopicMessageDocumentContent.fromJson(JSON.stringify(obj));
+    const content = await TopicMessageDocumentContent.fromJson(JSON.stringify(obj));
     assert.equal(content.providerTypeName, "providerTypeName");
     assert.equal(content.clusterName, "clusterName");
     assert.equal(content.tenantName, "tenantName");
@@ -64,14 +64,14 @@ describe("Topic message document content tests", () => {
     assert.throws(() => TopicMessageDocumentContent.fromJson(JSON.stringify(obj)));
   });
 
-  it("should add a message", () => {
-    const content = new TopicMessageDocumentContent("providerTypeName",
+  it("should add a message", async () => {
+    const content = await TopicMessageDocumentContent.build("providerTypeName",
       "clusterName",
       "tenantName",
       "namespaceName",
       "topicName",
       "topicType",
-    "latest",
+      "latest",
       []);
     content.addMessage({
       publishTime: "asdf",

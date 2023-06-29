@@ -1,4 +1,5 @@
 import {ClusterData} from "@apache-pulsar/pulsar-admin/dist/gen/models/cluster-data";
+import {GetSchemaResponse} from "@apache-pulsar/pulsar-admin/dist/gen/models";
 
 export type TPulsarAdmin = {
   providerTypeName: string;
@@ -20,7 +21,7 @@ export type TPulsarAdmin = {
 
   GetClusterDetails(clusterName: string): Promise<ClusterData | undefined>;
 
-  GetTopicSchema(tenantName: string, namespaceName: string, topicName: string): Promise<string | undefined>;
+  GetTopicSchema(tenantName: string, namespaceName: string, topicName: string): Promise<GetSchemaResponse | undefined>;
 
   CreatePersistentTopic(tenantName: string, namespaceName: string, topicName: string, numPartitions: number, metadata: {[p: string]: string} | undefined): Promise<undefined>;
 

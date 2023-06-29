@@ -6,7 +6,7 @@ import TopicMessageDocumentContent from "./topicMessageDocumentContent";
 export default class TopicMessagesDocument implements vscode.CustomDocument {
   public static async create(uri: vscode.Uri, backupId: string | undefined): Promise<TopicMessagesDocument> {
     // If we have a backup, read that.
-    console.debug(typeof backupId === 'string' ? `Creating document from backup` : `Creating new document`);
+    console.log(typeof backupId === 'string' ? `Creating document from backup` : `Creating new document`);
     const dataFile = typeof backupId === 'string' ? vscode.Uri.parse(backupId) : uri;
 
     return TopicMessagesDocument.readFile(dataFile);
@@ -16,10 +16,9 @@ export default class TopicMessagesDocument implements vscode.CustomDocument {
 
     // Opening a new document. Parse the info from the uri and build a new document.
     if (uri.scheme === 'untitled') {
-      console.debug("Using untitled scheme");
+      console.log("Using untitled scheme");
       const uriParts = uri.path.split('\\');
 
-      console.debug("uriParts: %o", uriParts);
       const providerTypeName = uriParts[0];
       const clusterName = uriParts[1];
       const tenantName = uriParts[2];
@@ -27,31 +26,30 @@ export default class TopicMessagesDocument implements vscode.CustomDocument {
       const topicType = uriParts[4];
       const topicName = uriParts[5]?.replace('.pulsar', '');
 
-      const newTopicContent =  new TopicMessageDocumentContent(providerTypeName, clusterName, tenantName, namespaceName, topicName, topicType, "earliest", []);
+      const newTopicContent = await TopicMessageDocumentContent.build(providerTypeName, clusterName, tenantName, namespaceName, topicName, topicType, "earliest", []);
 
-      console.debug("New topic content: %o", newTopicContent);
       return new TopicMessagesDocument(uri, newTopicContent);
     }
 
     // Otherwise parse the existing file's contents.
-    console.debug("Using existing file");
+    console.log("Using existing file");
     let fileContents: TopicMessageDocumentContent | undefined = undefined;
     try {
-      fs.readFile(uri.fsPath, "utf8", (err: ErrnoException | null, data: string) => {
-        if (err){
+      fs.readFile(uri.fsPath, "utf8", async (err: ErrnoException | null, data: string) => {
+        if (err) {
           throw new Error(`An error occurred trying to read the pulsar file - ${err?.message}`);
         }
 
-        console.debug("File contents: %o", data);
+        console.log("File contents: %o", data);
 
-        try{
-          fileContents = TopicMessageDocumentContent.fromJson(data);
-        }catch (e: any){
+        try {
+          fileContents = await TopicMessageDocumentContent.fromJson(data);
+        } catch (e: any) {
           throw new Error('Could not build document from file contents - ' + e?.message);
         }
       });
     } catch(e) {
-      console.error(e);
+      console.log(e);
       throw e;
     }
 
@@ -69,14 +67,14 @@ export default class TopicMessagesDocument implements vscode.CustomDocument {
   }
 
   public dispose(): void {
-    console.debug("Disposing document");
+    console.log("Disposing document");
   }
 
   /**
    * Called by VS Code when the user saves the document.
    */
   public async save(cancellation: vscode.CancellationToken): Promise<void> {
-    console.debug("Saving document");
+    console.log("Saving document");
     await this.saveAs(this.uri, cancellation);
   }
 
@@ -84,12 +82,12 @@ export default class TopicMessagesDocument implements vscode.CustomDocument {
    * Called by VS Code when the user saves the document to a new location.
    */
   public async saveAs(targetResource: vscode.Uri, cancellation: vscode.CancellationToken): Promise<void> {
-    console.debug("Saving file contents as: %o", targetResource);
-    console.debug("File contents: %o", this.content.toJson());
+    console.log("Saving file contents as: %o", targetResource);
+    console.log("File contents: %o", this.content.toJson());
 
     fs.writeFile(targetResource.fsPath, this.content.toJson(), (err: ErrnoException | null) => {
       if (err) {
-        console.error(err);
+        console.log(err);
         throw new Error(`An error occurred trying to save the pulsar file - ${err.message}`); //let vscode handle the error
       }
     });
@@ -101,7 +99,7 @@ export default class TopicMessagesDocument implements vscode.CustomDocument {
    * These backups are used to implement hot exit.
    */
   public async backup(destination: vscode.Uri, cancellation: vscode.CancellationToken): Promise<vscode.CustomDocumentBackup> {
-    console.debug("Backing up document");
+    console.log("Backing up document");
     await this.saveAs(destination, cancellation);
 
     return {

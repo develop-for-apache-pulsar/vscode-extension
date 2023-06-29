@@ -6,7 +6,7 @@ import {TreeExplorerController} from "./controllers/treeExplorerController";
 import {ConfigController} from "./controllers/configController";
 import {PulsarAdminProviders} from "./pulsarAdminProviders";
 import * as Constants from "./common/constants";
-import Telemetry from "./utils/telemetry";
+//import Telemetry from "./utils/telemetry";
 import TopicMessageController from "./controllers/topicMessageController";
 import {TopicNode} from "./providers/pulsarClusterTreeDataProvider/nodes/topic";
 import {PulsarAdminProviderNode} from "./providers/pulsarClusterTreeDataProvider/nodes/pulsarAdminProvider";
@@ -16,15 +16,15 @@ import TopicController from "./controllers/topicController";
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
-	console.info('Welcome to the Apache Pulsar admin extension. There are many wonderful things to see and click.');
+	console.log('Welcome to the Apache Pulsar admin extension. There are many wonderful things to see and click.');
 
-	console.debug('Building provider registry');
+	console.log('Building provider registry');
 	const providerRegistry = new PulsarAdminProviders();
 
-	console.debug('Building tree provider');
+	console.log('Building tree provider');
 	const pulsarClusterTreeProvider = new PulsarClusterTreeDataProvider(providerRegistry, context);
 
-	console.debug('Building subscriptions');
+	console.log('Building subscriptions');
 	const subscriptions = [
 		vscode.window.registerTreeDataProvider(Constants.PROVIDER_CLUSTER_TREE, pulsarClusterTreeProvider),
 
@@ -34,11 +34,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 		registerReadonlyEditorProvider(Constants.TOPIC_MESSAGE_CUSTOM_EDITOR_VIEW_TYPE, TopicMessageController.createTopicMessageEditorProvider(context)),
 		registerCommand(Constants.COMMAND_WATCH_TOPIC_MESSAGES, (explorerNode: TopicNode) => TopicMessageController.watchTopicMessages(explorerNode, context)),
 		registerCommand(Constants.COMMAND_CREATE_TOPIC, (explorerNode: NamespaceNode) => TopicController.showNewTopicWizard(explorerNode, context, pulsarClusterTreeProvider)),
+		registerCommand(Constants.COMMAND_SHOW_TOPIC_SCHEMA, (explorerNode: TopicNode) => TopicController.showTopicSchemaDetails(explorerNode)),
 
-		Telemetry.initialize(),
+		//Telemetry.initialize(),
 	];
 
-	console.debug('Registering commands');
+	console.log('Registering commands');
 	subscriptions.forEach((element) => {
 		context.subscriptions.push(element);
 		console.log('Registered command');

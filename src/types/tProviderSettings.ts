@@ -7,7 +7,7 @@ export type TProviderSettings = {
   darkIconFileName: string;
   lightIconFileName: string;
   saveProviderWizard: {
-    new(wizard: Wizard): {
+    new(wizard: Wizard, successCallback?: () => void): {
       startWizard(): string;
       receivedMessage(message: any): Promise<void>;
     };

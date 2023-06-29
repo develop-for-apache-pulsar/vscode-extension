@@ -2,19 +2,18 @@ import {TTopicMessage} from "../../types/tTopicMessage";
 import {TTopicMessageDocumentContent} from "../../types/tTopicMessageDocumentContent";
 import ConfigurationProvider from "../configurationProvider/configuration";
 import * as path from "path";
+import {TPulsarAdmin} from "../../types/tPulsarAdmin";
+import {GetSchemaResponse} from "@apache-pulsar/pulsar-admin/dist/gen/models";
 
 export default class TopicMessageDocumentContent implements TTopicMessageDocumentContent{
-  private readonly _webSocketUrl: URL;
-  private readonly _pulsarToken: string | undefined;
-  private _schema: string | undefined;
-  constructor(public readonly providerTypeName: string,
-              public readonly clusterName: string,
-              public readonly tenantName: string,
-              public readonly namespaceName: string,
-              public readonly topicName: string,
-              public readonly topicType: string,
-              public lastMessageId: string,
-              public readonly messages: TTopicMessage[]) {
+  public static async build(providerTypeName: string,
+                            clusterName: string,
+                            tenantName: string,
+                            namespaceName: string,
+                            topicName: string,
+                            topicType: string,
+                            lastMessageId: string,
+                            messages: TTopicMessage[]): Promise<TopicMessageDocumentContent> {
     const savedProviderConfigs = ConfigurationProvider.getClusterConfigs();
 
     const savedProviderConfig = savedProviderConfigs.find((providerConfig) => { return providerConfig.providerTypeName === providerTypeName; });
@@ -22,14 +21,10 @@ export default class TopicMessageDocumentContent implements TTopicMessageDocumen
       throw new Error(`Could not find provider config for providerTypeName: ${providerTypeName}`);
     }
 
-    console.debug("Using provider config: %o", savedProviderConfig);
-
     const savedCluster = savedProviderConfig.clusters.find((cluster) => { return cluster.name === clusterName; });
     if(savedCluster === undefined){
       throw new Error(`Could not find cluster for name: ${clusterName}`);
     }
-
-    console.debug("Using cluster: %o", savedCluster);
 
     if(savedCluster.websocketUrl === undefined) {
       throw new Error("To watch topic messages the cluster must have websocket services running. Please ensure that the service is running and add the cluster again.");
@@ -40,34 +35,59 @@ export default class TopicMessageDocumentContent implements TTopicMessageDocumen
       throw new Error(`Could not find tenant for name: ${tenantName}`);
     }
 
-    console.debug("Using tenant: %o", savedTenant);
+    const providerClass = require(`../../pulsarAdminProviders/${savedProviderConfig.providerTypeName}/provider`);
+    const pulsarAdmin:TPulsarAdmin = new providerClass.Provider(savedCluster.webServiceUrl, savedTenant.pulsarToken);
 
-    this._webSocketUrl = new URL(savedCluster.websocketUrl);
+    const webSocketUrl = new URL(savedCluster.websocketUrl);
 
     if(!savedCluster.websocketUrl.endsWith("/")){
-      this._webSocketUrl.pathname += "/";
+      webSocketUrl.pathname += "/";
     }
 
-    this._webSocketUrl.pathname += path.join("reader", topicType, savedTenant.name, namespaceName, topicName);
-    this._webSocketUrl.searchParams.set("readerName", "vscode-reader");
-    this._webSocketUrl.searchParams.set("receiverQueueSize", "500");
-    this._webSocketUrl.searchParams.set("messageId", lastMessageId);
+    webSocketUrl.pathname += path.join("reader", topicType, savedTenant.name, namespaceName, topicName);
+    webSocketUrl.searchParams.set("readerName", "vscode-reader");
+    webSocketUrl.searchParams.set("receiverQueueSize", "500");
+    webSocketUrl.searchParams.set("messageId", lastMessageId);
 
+    let pulsarToken = undefined;
     if(savedTenant.pulsarToken !== undefined){
-      this._pulsarToken = savedTenant.pulsarToken;
+      pulsarToken = savedTenant.pulsarToken;
     }
 
-    // Todo: Look for a schema saved to topic, the below code was just a test
-    // savedTenant.pulsarAdmin.GetTopicSchema(tenantName, namespaceName, topicName).then((schema) => {
-    //   this._schema = schema;
-    // });
+    let topicSchema = undefined;
+    try{
+      topicSchema = await pulsarAdmin.GetTopicSchema(tenantName, namespaceName, topicName);
+    }catch(e:any){
+      //no op
+    }
+
+    return new TopicMessageDocumentContent(providerTypeName,
+      clusterName,
+      tenantName,
+      namespaceName,
+      topicName,
+      topicType,
+      lastMessageId,
+      messages,
+      topicSchema,
+      webSocketUrl,
+      pulsarToken);
   }
 
-  public get topicSchema(): string | undefined {
-    return this._schema;
-  }
+  constructor(public readonly providerTypeName: string,
+              public readonly clusterName: string,
+              public readonly tenantName: string,
+              public readonly namespaceName: string,
+              public readonly topicName: string,
+              public readonly topicType: string,
+              public lastMessageId: string,
+              public readonly messages: TTopicMessage[],
+              public readonly topicSchema: GetSchemaResponse | undefined,
+              private readonly _webSocketUrl: URL,
+              private readonly _pulsarToken: string | undefined) {}
 
-  public static fromJson(json: string): TopicMessageDocumentContent{
+
+  public static async fromJson(json: string): Promise<TopicMessageDocumentContent>{
     try{
       const parsed = JSON.parse(json);
 
@@ -95,7 +115,7 @@ export default class TopicMessageDocumentContent implements TTopicMessageDocumen
         throw new Error("topicType is not set");
       }
 
-      const topicMessage = new TopicMessageDocumentContent(parsed.providerTypeName,
+      const topicMessage = await TopicMessageDocumentContent.build(parsed.providerTypeName,
         parsed.clusterName,
         parsed.tenantName,
         parsed.namespaceName,

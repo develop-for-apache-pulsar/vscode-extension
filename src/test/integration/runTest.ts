@@ -23,11 +23,11 @@ async function go() {
 	// 	const launchArgs = [testWorkspace, '--disable-extensions', '--disable-gpu', '--headless', '--no-sandbox', '--remote-debugging-port=9222'];
 	// 	const result = await runTests({ vscodeExecutablePath, extensionDevelopmentPath, extensionTestsPath, launchArgs });
 	// 	if (result.failed) {
-	// 		console.error(result);
+	// 		console.log(result);
 	// 		process.exit(1);
 	// 	}
 	// } catch (err) {
-	// 	console.error('Failed to run tests');
+	// 	console.log('Failed to run tests');
 	// 	process.exit(1);
 	// }
 }
