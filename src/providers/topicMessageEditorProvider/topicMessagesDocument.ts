@@ -17,7 +17,18 @@ export default class TopicMessagesDocument implements vscode.CustomDocument {
     // Opening a new document. Parse the info from the uri and build a new document.
     if (uri.scheme === 'untitled') {
       console.log("Using untitled scheme");
-      const uriParts = uri.path.split('\\');
+
+      let uriParts = null;
+
+      if (process.platform === 'win32') {
+        uriParts = uri.path.split('\\');
+      } else if (process.platform === 'linux') {
+        uriParts = uri.path.split('\\');
+      } else if (process.platform === 'darwin') {
+        uriParts = uri.path.split('/');
+      } else { // default to linux
+        uriParts = uri.path.split('\\');
+      }
 
       const providerTypeName = uriParts[0];
       const clusterName = uriParts[1];
