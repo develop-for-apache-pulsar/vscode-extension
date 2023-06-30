@@ -2,7 +2,7 @@
   "name": "develop-for-apache-pulsar",
   "displayName": "Develop for Apache Pulsar",
   "description": "Develop applications that use Apache Pulsar",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "publisher": "DataStax",
   "engines": {
     "vscode": "^1.77.0"
