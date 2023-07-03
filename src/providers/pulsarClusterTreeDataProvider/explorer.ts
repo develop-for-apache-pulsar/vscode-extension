@@ -7,11 +7,12 @@ import {FolderNode} from "./nodes/folder";
 import {TopicTree} from "./nodes/topic";
 import {ConnectorSourceTree} from "./nodes/connectorSource";
 import {ConnectorSinkTree} from "./nodes/connectorSink";
-import {FunctionTree} from "./nodes/function";
+import {FunctionTree, IFunctionNode} from "./nodes/function";
 import {BuildPulsarAdminProviderConfigs} from "../../pulsarAdminProviders/pulsarAdminProviders";
 import {PulsarAdminProviders} from "../../pulsarAdminProviders";
 import {CONTEXT_VALUES, ExplorerFolderTypes, PROVIDER_CLUSTER_TREE} from "../../common/constants";
 import {TAllPulsarAdminExplorerNodeTypes} from "../../types/tAllPulsarAdminExplorerNodeTypes";
+import {FunctionInstanceTree} from "./nodes/functionInstance";
 
 export class PulsarClusterTreeDataProvider implements vscode.TreeDataProvider<TAllPulsarAdminExplorerNodeTypes> {
   private onDidChangeTreeDataEmitter: vscode.EventEmitter<TAllPulsarAdminExplorerNodeTypes | undefined> = new vscode.EventEmitter<TAllPulsarAdminExplorerNodeTypes | undefined>();
@@ -38,16 +39,20 @@ export class PulsarClusterTreeDataProvider implements vscode.TreeDataProvider<TA
       return new PulsarAdminProviderTree(this.context).getChildren(pulsarAdminProviderConfigs);
     }
 
+    if(parent.contextValue === undefined){
+      return [];
+    }
+
     switch (parent.contextValue) {
       case CONTEXT_VALUES.provider:
         const provider = parent as IPulsarAdminProviderNode;
-        return new ClusterTree().getChildren(provider);
+        return await new ClusterTree().getChildren(provider);
       case CONTEXT_VALUES.cluster:
         const cluster = parent as IClusterNode;
-        return new TenantTree().getChildren(cluster);
+        return await new TenantTree().getChildren(cluster);
       case CONTEXT_VALUES.tenant:
         const tenant = parent as ITenantNode;
-        return new NamespaceTree().getChildren(tenant);
+        return await new NamespaceTree().getChildren(tenant);
       case CONTEXT_VALUES.namespace:
         const namespace = parent as INamespaceNode;
         // Build a tree of all the namespaced objects
@@ -61,19 +66,26 @@ export class PulsarClusterTreeDataProvider implements vscode.TreeDataProvider<TA
 
         switch (folderNode.folderType) {
           case ExplorerFolderTypes.topicFolder:
-            return new TopicTree(folderNode.pulsarAdmin).getChildren(folderNode.tenantName, folderNode.namespace, folderNode.providerTypeName, folderNode.clusterName);
+            return await new TopicTree(folderNode.pulsarAdmin).getChildren(folderNode.tenantName, folderNode.namespace, folderNode.providerTypeName, folderNode.clusterName);
           case ExplorerFolderTypes.connectorFolder:
             return [
               new FolderNode(folderNode.pulsarAdmin, 'Sources', ExplorerFolderTypes.sourceFolder, folderNode.tenantName, folderNode.namespace, folderNode.providerTypeName, folderNode.clusterName),
               new FolderNode(folderNode.pulsarAdmin, 'Sinks', ExplorerFolderTypes.sinkFolder, folderNode.tenantName, folderNode.namespace, folderNode.providerTypeName, folderNode.clusterName),
             ];
           case ExplorerFolderTypes.sourceFolder:
-            return new ConnectorSourceTree(folderNode.pulsarAdmin).getChildren(folderNode.tenantName, folderNode.namespace);
+            return await new ConnectorSourceTree(folderNode.pulsarAdmin).getChildren(folderNode.tenantName, folderNode.namespace);
           case ExplorerFolderTypes.sinkFolder:
-            return new ConnectorSinkTree(folderNode.pulsarAdmin).getChildren(folderNode.tenantName, folderNode.namespace);
+            return await new ConnectorSinkTree(folderNode.pulsarAdmin).getChildren(folderNode.tenantName, folderNode.namespace);
           case ExplorerFolderTypes.functionFolder:
-            return new FunctionTree(folderNode.pulsarAdmin).getChildren(folderNode.tenantName, folderNode.namespace);
+            return await new FunctionTree(folderNode.pulsarAdmin).getChildren(folderNode.tenantName, folderNode.namespace, folderNode.providerTypeName, folderNode.clusterName);
         }
+
+        break;
+    }
+
+    if(parent.contextValue.indexOf(CONTEXT_VALUES.function) > -1) {
+      const pulsarFunction = parent as IFunctionNode;
+      return await new FunctionInstanceTree(pulsarFunction.pulsarAdmin).getChildren(pulsarFunction.tenantName, pulsarFunction.namespaceName, pulsarFunction.label);
     }
 
     return []; // the parent type is unknown

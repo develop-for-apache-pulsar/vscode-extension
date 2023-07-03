@@ -12,6 +12,9 @@ import {TopicNode} from "./providers/pulsarClusterTreeDataProvider/nodes/topic";
 import {PulsarAdminProviderNode} from "./providers/pulsarClusterTreeDataProvider/nodes/pulsarAdminProvider";
 import {NamespaceNode} from "./providers/pulsarClusterTreeDataProvider/nodes/namespace";
 import TopicController from "./controllers/topicController";
+import {FunctionNode} from "./providers/pulsarClusterTreeDataProvider/nodes/function";
+import FunctionController from "./controllers/functionController";
+import {FunctionInstanceNode} from "./providers/pulsarClusterTreeDataProvider/nodes/functionInstance";
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -32,9 +35,20 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 		registerCommand(Constants.COMMAND_REFRESH_EXPLORER, () => TreeExplorerController.refreshTreeProvider(pulsarClusterTreeProvider)),
 		registerCommand(Constants.COMMAND_ADD_CLUSTER_CONFIG, () => ConfigController.showAddClusterConfigWizard(providerRegistry, context, pulsarClusterTreeProvider)),
 		registerReadonlyEditorProvider(Constants.TOPIC_MESSAGE_CUSTOM_EDITOR_VIEW_TYPE, TopicMessageController.createTopicMessageEditorProvider(context)),
-		registerCommand(Constants.COMMAND_WATCH_TOPIC_MESSAGES, (explorerNode: TopicNode) => TopicMessageController.watchTopicMessages(explorerNode, context)),
+		registerCommand(Constants.COMMAND_WATCH_TOPIC_MESSAGES, (explorerNode: TopicNode) => TopicMessageController.watchTopicMessages(explorerNode)),
 		registerCommand(Constants.COMMAND_CREATE_TOPIC, (explorerNode: NamespaceNode) => TopicController.showNewTopicWizard(explorerNode, context, pulsarClusterTreeProvider)),
 		registerCommand(Constants.COMMAND_SHOW_TOPIC_SCHEMA, (explorerNode: TopicNode) => TopicController.showTopicSchemaDetails(explorerNode)),
+		registerCommand(Constants.COMMAND_START_FUNCTION, (explorerNode: FunctionNode) => FunctionController.startFunction(explorerNode, pulsarClusterTreeProvider)),
+		registerCommand(Constants.COMMAND_STOP_FUNCTION, (explorerNode: FunctionNode) => FunctionController.stopFunction(explorerNode, pulsarClusterTreeProvider)),
+		registerCommand(Constants.COMMAND_RESTART_FUNCTION, (explorerNode: FunctionNode) => FunctionController.restartFunction(explorerNode, pulsarClusterTreeProvider)),
+		registerCommand(Constants.COMMAND_FUNCTION_STATISTICS, (explorerNode: FunctionNode) => FunctionController.showFunctionStatistics(explorerNode)),
+		registerCommand(Constants.COMMAND_FUNCTION_STATUS, (explorerNode: FunctionNode) => FunctionController.showFunctionStatus(explorerNode)),
+		registerCommand(Constants.COMMAND_FUNCTION_INFO, (explorerNode: FunctionNode) => FunctionController.showFunctionInfo(explorerNode)),
+		registerCommand(Constants.COMMAND_FUNCTION_DELETE, (explorerNode: FunctionNode) => FunctionController.deleteFunction(explorerNode, pulsarClusterTreeProvider)),
+		registerCommand(Constants.COMMAND_FUNCTION_WATCH_TOPICS, (explorerNode: FunctionNode) => FunctionController.watchFunctionTopics(explorerNode)),
+		registerCommand(Constants.COMMAND_START_FUNCTION_INSTANCE, (explorerNode: FunctionInstanceNode) => FunctionController.startFunctionInstance(explorerNode, context, pulsarClusterTreeProvider)),
+		registerCommand(Constants.COMMAND_STOP_FUNCTION_INSTANCE, (explorerNode: FunctionInstanceNode) => FunctionController.stopFunctionInstance(explorerNode, context, pulsarClusterTreeProvider)),
+		registerCommand(Constants.COMMAND_RESTART_FUNCTION_INSTANCE, (explorerNode: FunctionInstanceNode) => FunctionController.restartFunctionInstance(explorerNode, context, pulsarClusterTreeProvider)),
 
 		//Telemetry.initialize(),
 	];

@@ -40,4 +40,48 @@ export default class TopicController {
       vscode.window.showTextDocument(doc, { preview: false });
     });
   }
+
+  public static parseTopicAddress(topicAddress: string): URL {
+    return new URL(topicAddress);
+  }
+
+  public static parseTopicType(topicUrl: URL): string | undefined {
+    try {
+      return topicUrl.protocol.replace(':', '');
+    } catch (e) {
+      return undefined;
+    }
+  }
+
+  public static parseTopicTenant(topicUrl: URL): string | undefined {
+    try {
+      return topicUrl.host;
+    } catch (e) {
+      return undefined;
+    }
+  }
+
+  public static parseTopicNamespace(topicUrl: URL): string | undefined {
+    try {
+      const pathSplit = topicUrl.pathname.split('/');
+      if(pathSplit.length < 2) { // there is a leading slash
+        return undefined;
+      }
+      return pathSplit[1];
+    } catch (e) {
+      return undefined;
+    }
+  }
+
+  public static parseTopicName(topicUrl: URL): string | undefined {
+    try {
+      const pathSplit = topicUrl.pathname.split('/');
+      if(pathSplit.length < 3) {
+        return undefined;
+      }
+      return pathSplit[2];
+    } catch (e) {
+      return undefined;
+    }
+  }
 }
