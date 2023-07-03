@@ -2,7 +2,7 @@
   "name": "develop-for-apache-pulsar",
   "displayName": "Develop for Apache Pulsar",
   "description": "Develop applications that use Apache Pulsar",
-  "version": "0.2.3",
+  "version": "0.3.1",
   "publisher": "DataStax",
   "engines": {
     "vscode": "^1.77.0"
@@ -40,7 +40,6 @@
     "test:unit": "node ./node_modules/mocha/bin/mocha --require ./src/test/unit/hooks.js",
     "test": "npm run test:unit && npm run test:ext"
   },
-  "dependencies": {},
   "devDependencies": {
     "@apache-pulsar/pulsar-admin": "^2.11.1-alpha.1",
     "@types/chai": "^4.3.5",
@@ -55,6 +54,7 @@
     "@typescript-eslint/parser": "^5.59.1",
     "@vscode/extension-telemetry": "^0.8.0",
     "@vscode/test-electron": "^2.3.0",
+    "avsc": "^5.7.7",
     "axios": "^1.4.0",
     "bufferutil": "^4.0.7",
     "chai": "^4.3.7",
@@ -74,7 +74,7 @@
     "webpack": "^5.81.0",
     "webpack-cli": "^5.0.2",
     "ws": "^8.13.0",
-    "avsc": "^5.7.7"
+    "yaml": "^2.3.1"
   },
   "contributes": {
     "customEditors": [
@@ -181,6 +181,65 @@
           "command": "extension.vsDevelopPulsarCreateTopic",
           "when": "view == extension.vsPulsarClusterExplorer && viewItem == vsDevelopPulsar.namespace",
           "group": "0@1"
+        },
+
+
+        {
+          "command": "extension.vsDevelopPulsarFunctionInfo",
+          "when": "view == extension.vsPulsarClusterExplorer && viewItem =~ /vsDevelopPulsar\\.function\\.function\\..*/i",
+          "group": "0@1"
+        },
+        {
+          "command": "extension.vsDevelopPulsarFunctionStatus",
+          "when": "view == extension.vsPulsarClusterExplorer && viewItem =~ /vsDevelopPulsar\\.function\\.function\\..*/i",
+          "group": "0@2"
+        },
+        {
+          "command": "extension.vsDevelopPulsarFunctionStatistics",
+          "when": "view == extension.vsPulsarClusterExplorer && viewItem =~ /vsDevelopPulsar\\.function\\.function\\..*/i",
+          "group": "0@3"
+        },
+        {
+          "command": "extension.vsDevelopPulsarWatchFunctionTopics",
+          "when": "view == extension.vsPulsarClusterExplorer && viewItem =~ /vsDevelopPulsar\\.function\\.function\\..*/i",
+          "group": "0@4"
+        },
+        {
+          "command": "extension.vsDevelopPulsarStartFunction",
+          "when": "view == extension.vsPulsarClusterExplorer && viewItem =~ /vsDevelopPulsar\\.function\\.function\\..*\\.stopped/i",
+          "group": "1@1"
+        },
+        {
+          "command": "extension.vsDevelopPulsarStopFunction",
+          "when": "view == extension.vsPulsarClusterExplorer && viewItem =~ /vsDevelopPulsar\\.function\\.function\\..*\\.started/i",
+          "group": "1@2"
+        },
+        {
+          "command": "extension.vsDevelopPulsarRestartFunction",
+          "when": "view == extension.vsPulsarClusterExplorer && viewItem =~ /vsDevelopPulsar\\.function\\.function\\..*\\.started/i",
+          "group": "1@3"
+        },
+        {
+          "command": "extension.vsDevelopPulsarFunctionDelete",
+          "when": "view == extension.vsPulsarClusterExplorer && viewItem =~ /vsDevelopPulsar\\.function\\.function\\..*/i",
+          "group": "2@0"
+        },
+
+
+        {
+          "command": "extension.vsDevelopPulsarStartFunctionInstance",
+          "when": "view == extension.vsPulsarClusterExplorer && viewItem =~ /vsDevelopPulsar\\.function\\.instance\\..*\\.stopped/i",
+          "group": "0@1"
+        },
+        {
+          "command": "extension.vsDevelopPulsarStopFunctionInstance",
+          "when": "view == extension.vsPulsarClusterExplorer && viewItem =~ /vsDevelopPulsar\\.function\\.instance\\..*\\.started/i",
+          "group": "0@2"
+        },
+        {
+          "command": "extension.vsDevelopPulsarRestartFunctionInstance",
+          "when": "view == extension.vsPulsarClusterExplorer && viewItem =~ /vsDevelopPulsar\\.function\\.instance\\..*\\.started/i",
+          "group": "0@3"
         }
       ]
     },
@@ -215,6 +274,65 @@
       {
         "command": "extension.vsDevelopPulsarShowTopicSchema",
         "title": "Schema",
+        "category": "DevelopPulsar"
+      },
+
+
+      {
+        "command": "extension.vsDevelopPulsarStartFunction",
+        "title": "Start",
+        "category": "DevelopPulsar"
+      },
+      {
+        "command": "extension.vsDevelopPulsarStopFunction",
+        "title": "Stop all instances",
+        "category": "DevelopPulsar"
+      },
+      {
+        "command": "extension.vsDevelopPulsarRestartFunction",
+        "title": "Restart all instances",
+        "category": "DevelopPulsar"
+      },
+      {
+        "command": "extension.vsDevelopPulsarFunctionStatistics",
+        "title": "Statistics",
+        "category": "DevelopPulsar"
+      },
+      {
+        "command": "extension.vsDevelopPulsarFunctionStatus",
+        "title": "Status",
+        "category": "DevelopPulsar"
+      },
+      {
+        "command": "extension.vsDevelopPulsarFunctionInfo",
+        "title": "Info",
+        "category": "DevelopPulsar"
+      },
+      {
+        "command": "extension.vsDevelopPulsarWatchFunctionTopics",
+        "title": "Watch topics",
+        "category": "DevelopPulsar"
+      },
+      {
+        "command": "extension.vsDevelopPulsarFunctionDelete",
+        "title": "Delete",
+        "category": "DevelopPulsar"
+      },
+
+
+      {
+        "command": "extension.vsDevelopPulsarStartFunctionInstance",
+        "title": "Start",
+        "category": "DevelopPulsar"
+      },
+      {
+        "command": "extension.vsDevelopPulsarStopFunctionInstance",
+        "title": "Stop",
+        "category": "DevelopPulsar"
+      },
+      {
+        "command": "extension.vsDevelopPulsarRestartFunctionInstance",
+        "title": "Restart",
         "category": "DevelopPulsar"
       }
     ]

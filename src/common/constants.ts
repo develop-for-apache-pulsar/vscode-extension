@@ -16,6 +16,17 @@ export const COMMAND_REMOVE_CLUSTER_CONFIG = 'extension.vsDevelopPulsarRemoveClu
 export const COMMAND_WATCH_TOPIC_MESSAGES = 'extension.vsDevelopPulsarWatchTopicMessages';
 export let COMMAND_CREATE_TOPIC = 'extension.vsDevelopPulsarCreateTopic';
 export let COMMAND_SHOW_TOPIC_SCHEMA = 'extension.vsDevelopPulsarShowTopicSchema';
+export const COMMAND_STOP_FUNCTION = 'extension.vsDevelopPulsarStopFunction';
+export const COMMAND_RESTART_FUNCTION = 'extension.vsDevelopPulsarRestartFunction';
+export const COMMAND_START_FUNCTION = 'extension.vsDevelopPulsarStartFunction';
+export const COMMAND_FUNCTION_STATISTICS = 'extension.vsDevelopPulsarFunctionStatistics';
+export const COMMAND_FUNCTION_STATUS = 'extension.vsDevelopPulsarFunctionStatus';
+export const COMMAND_FUNCTION_INFO = 'extension.vsDevelopPulsarFunctionInfo';
+export const COMMAND_FUNCTION_DELETE = 'extension.vsDevelopPulsarFunctionDelete';
+export const COMMAND_FUNCTION_WATCH_TOPICS = 'extension.vsDevelopPulsarWatchFunctionTopics';
+export const COMMAND_STOP_FUNCTION_INSTANCE = 'extension.vsDevelopPulsarStopFunctionInstance';
+export const COMMAND_RESTART_FUNCTION_INSTANCE = 'extension.vsDevelopPulsarRestartFunctionInstance';
+export const COMMAND_START_FUNCTION_INSTANCE = 'extension.vsDevelopPulsarStartFunctionInstance';
 
 // PROVIDERS
 export const PROVIDER_CLUSTER_TREE = 'extension.vsPulsarClusterExplorer';
@@ -38,8 +49,9 @@ export const CONTEXT_VALUES = {
   schemaFolder: 'vsDevelopPulsar.schemaFolder',
   source: 'vsDevelopPulsar.source',
   sink: 'vsDevelopPulsar.sink',
-  function: 'vsDevelopPulsar.function',
+  function: 'vsDevelopPulsar.function.function',
   folder: 'vsDevelopPulsar.folder',
+  functionInstance: 'vsDevelopPulsar.function.instance',
 };
 
 export enum ExplorerMessageTypes {
@@ -51,6 +63,7 @@ export enum ExplorerMessageTypes {
   noConnectorSources,
   noFunctions,
   customMessage,
+  noFunctionInstances,
 }
 
 export enum ExplorerFolderTypes {

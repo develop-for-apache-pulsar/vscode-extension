@@ -36,6 +36,9 @@ export class MessageNode extends vscode.TreeItem implements IMessageNode {
       case ExplorerMessageTypes.noFunctions:
         this.label = "(no functions)";
         break;
+      case ExplorerMessageTypes.noFunctionInstances:
+        this.label = "(no instances)";
+        break;
       case ExplorerMessageTypes.customMessage:
         this.label = messageText || "";
         break;

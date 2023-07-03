@@ -1,6 +1,6 @@
 import {TopicMessageEditorProvider} from "../providers/topicMessageEditorProvider/topicMessageEditorProvider";
 import * as vscode from "vscode";
-import {TopicNode} from "../providers/pulsarClusterTreeDataProvider/nodes/topic";
+import {ITopicNode} from "../providers/pulsarClusterTreeDataProvider/nodes/topic";
 import * as Constants from "../common/constants";
 import * as path from "path";
 
@@ -9,7 +9,7 @@ export default class TopicMessageController {
     return new TopicMessageEditorProvider(context);
   }
 
-  static async watchTopicMessages(topicNode: TopicNode, context: vscode.ExtensionContext): Promise<void> {
+  static async watchTopicMessages(topicNode: ITopicNode): Promise<void> {
     const virtualFilePath = path.join(topicNode.pulsarAdmin.providerTypeName,
       topicNode.clusterName,
       topicNode.tenantName,

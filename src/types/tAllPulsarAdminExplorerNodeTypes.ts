@@ -9,6 +9,7 @@ import {ITopicNode} from "../providers/pulsarClusterTreeDataProvider/nodes/topic
 import {IConnectorSourceNode} from "../providers/pulsarClusterTreeDataProvider/nodes/connectorSource";
 import {IConnectorSinkNode} from "../providers/pulsarClusterTreeDataProvider/nodes/connectorSink";
 import {IFunctionNode} from "../providers/pulsarClusterTreeDataProvider/nodes/function";
+import {IFunctionInstanceNode} from "../providers/pulsarClusterTreeDataProvider/nodes/functionInstance";
 
 export type TAllPulsarAdminExplorerNodeTypes =
   | IPulsarAdminProviderNode
@@ -21,4 +22,5 @@ export type TAllPulsarAdminExplorerNodeTypes =
   | ITopicNode
   | IConnectorSourceNode
   | IConnectorSinkNode
-  | IFunctionNode;
+  | IFunctionNode
+  | IFunctionInstanceNode;

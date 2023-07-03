@@ -1,5 +1,13 @@
+/* eslint-disable @typescript-eslint/naming-convention */
+
 import {ClusterData} from "@apache-pulsar/pulsar-admin/dist/gen/models/cluster-data";
-import {GetSchemaResponse} from "@apache-pulsar/pulsar-admin/dist/gen/models";
+import {
+  FunctionInstanceStatsDataImpl,
+  FunctionInstanceStatusData,
+  FunctionStatsImpl,
+  GetSchemaResponse,
+  FunctionStatus, FunctionConfig
+} from "@apache-pulsar/pulsar-admin/dist/gen/models";
 
 export type TPulsarAdmin = {
   providerTypeName: string;
@@ -26,6 +34,22 @@ export type TPulsarAdmin = {
   CreatePersistentTopic(tenantName: string, namespaceName: string, topicName: string, numPartitions: number, metadata: {[p: string]: string} | undefined): Promise<undefined>;
 
   CreateNonPersistentTopic(tenantName: string, namespaceName: string, topicName: string, numPartitions: number, metadata: {[p: string]: string} | undefined): Promise<undefined>;
+
+  StartFunction(tenantName: string, namespaceName: string, functionName: string, instanceId?: number | undefined): Promise<void | undefined>;
+
+  StopFunction(tenantName: string, namespaceName: string, functionName: string, instanceId?: number | undefined): Promise<void | undefined>;
+
+  RestartFunction(tenantName: string, namespaceName: string, functionName: string, instanceId?: number | undefined): Promise<void | undefined>;
+
+  FunctionStats(tenantName: string, namespaceName: string, functionName: string, instanceId?: number | undefined): Promise<FunctionStatsImpl | FunctionInstanceStatsDataImpl | undefined>;
+
+  FunctionStatus(tenantName: string, namespaceName: string, functionName: string, instanceId?: number | undefined): Promise<FunctionStatus | FunctionInstanceStatusData | undefined>;
+
+  GetFunctionInfo(tenantName: string, namespaceName: string, functionName: string): Promise<FunctionConfig | undefined>;
+
+  DeleteFunction(tenantName: string, namespaceName: string, functionName: string): Promise<void | undefined>;
+
+  TopicExists(topicType: string, tenantName: string, namespaceName: string, topicName: string): Promise<boolean>
 };
 
 
