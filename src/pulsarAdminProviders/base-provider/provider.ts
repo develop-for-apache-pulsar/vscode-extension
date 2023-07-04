@@ -14,6 +14,7 @@ import {
   PartitionedTopicMetadata
 } from "@apache-pulsar/pulsar-admin/dist/gen/models";
 import axios, {Axios, AxiosRequestConfig, AxiosResponse} from "axios";
+import {TopicStats} from "./topicStats";
 
 export class BaseProvider implements TPulsarAdmin {
   protected readonly client: PulsarAdmin;
@@ -277,8 +278,40 @@ export class BaseProvider implements TPulsarAdmin {
       }
 
       const resp: AxiosResponse = await new Axios(options).put(this.webServiceUrl + '/admin/v2/' + topicType + '/' + tenantName + '/' + namespaceName + '/' + topicName);
+
+      if(resp.status > 199 && resp.status < 300) {
+        await new Axios(options).delete(this.webServiceUrl + '/admin/v2/' + topicType + '/' + tenantName + '/' + namespaceName + '/' + topicName);
+      }
+
       resolve((resp.status === 409)); // This topic already exists
     });
+  }
+
+  @trace('Base: Topic stats')
+  public async TopicStats(topicType:string, tenantName: string, namespaceName: string, topicName: string): Promise<TopicStats | undefined> {
+    if(topicType === 'persistent') {
+      return this.QueryPulsarAdminClient<TopicStats | undefined>(this.client.persistentTopic().getStats(tenantName, namespaceName, topicName), undefined);
+    }
+
+    return this.QueryPulsarAdminClient<TopicStats | undefined>(this.client.nonPersistentTopic().getStats(tenantName, namespaceName, topicName), undefined);
+  }
+
+  @trace('Base: Topic properties')
+  public async TopicProperties(topicType:string, tenantName: string, namespaceName: string, topicName: string): Promise<[{ [key: string]: string; }] | undefined> {
+    if(topicType === 'persistent') {
+      return this.QueryPulsarAdminClient<[{ [key: string]: string; }]| undefined>(this.client.persistentTopic().getProperties(tenantName, namespaceName, topicName), undefined);
+    }
+
+    return this.QueryPulsarAdminClient<[{ [key: string]: string; }] | undefined>(this.client.nonPersistentTopic().getProperties(tenantName, namespaceName, topicName), undefined);
+  }
+
+  @trace('Base: Topic delete')
+  public async DeleteTopic(topicType:string, tenantName: string, namespaceName: string, topicName: string): Promise<void> {
+    if(topicType === 'persistent') {
+      return this.QueryPulsarAdminClient<void>(this.client.persistentTopic().deleteTopic(tenantName, namespaceName, topicName), undefined);
+    }
+
+    return this.QueryPulsarAdminClient<void>(this.client.nonPersistentTopic().deleteTopic(tenantName, namespaceName, topicName), undefined);
   }
 }
 

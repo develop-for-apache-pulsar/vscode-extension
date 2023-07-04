@@ -5,6 +5,9 @@ import {CreateTopicWizard} from "../wizards/createTopic";
 import {PulsarClusterTreeDataProvider} from "../providers/pulsarClusterTreeDataProvider/explorer";
 import {TreeExplorerController} from "./treeExplorerController";
 import {TopicNode} from "../providers/pulsarClusterTreeDataProvider/nodes/topic";
+import * as YAML from "yaml";
+import TextDocumentHelper from "../utils/textDocumentHelper";
+import {FunctionNode} from "../providers/pulsarClusterTreeDataProvider/nodes/function";
 
 export default class TopicController {
   @trace('Show Add Cluster Config Wizard')
@@ -83,5 +86,45 @@ export default class TopicController {
     } catch (e) {
       return undefined;
     }
+  }
+
+  public static showTopicStatistics(topicNode: TopicNode) {
+    topicNode.pulsarAdmin.TopicStats(topicNode.topicType, topicNode.tenantName, topicNode.namespaceName, topicNode.label).then(async (stats) => {
+      if (stats === undefined) {
+        vscode.window.showErrorMessage(`Error occurred getting topic statistics`);
+        return;
+      }
+
+      const documentContent = YAML.stringify(stats, null, 2);
+      await TextDocumentHelper.openDocument(documentContent, 'yaml');
+    }).catch((e) => {
+      vscode.window.showErrorMessage(`Error occurred getting topic statistics: ${e}`);
+      console.log(e);
+    });
+  }
+
+  public static showTopicProperties(topicNode: TopicNode) {
+    topicNode.pulsarAdmin.TopicProperties(topicNode.topicType, topicNode.tenantName, topicNode.namespaceName, topicNode.label).then(async (props) => {
+      if (props === undefined) {
+        vscode.window.showErrorMessage(`Error occurred getting topic properties`);
+        return;
+      }
+
+      const documentContent = YAML.stringify(props, null, 2);
+      await TextDocumentHelper.openDocument(documentContent, 'yaml');
+    }).catch((e) => {
+      vscode.window.showErrorMessage(`Error occurred getting topic properties: ${e}`);
+      console.log(e);
+    });
+  }
+
+  public static deleteTopic(topicNode: TopicNode, pulsarClusterTreeProvider: PulsarClusterTreeDataProvider): void {
+    topicNode.pulsarAdmin.DeleteTopic(topicNode.topicType, topicNode.tenantName, topicNode.namespaceName, topicNode.label).then(() => {
+      vscode.window.showInformationMessage(`Topic '${topicNode.label}' deleted`);
+      TreeExplorerController.refreshTreeProvider(pulsarClusterTreeProvider);
+    }).catch((e) => {
+      vscode.window.showErrorMessage(`Error deleting topic: ${e}`);
+      console.log(e);
+    });
   }
 }
