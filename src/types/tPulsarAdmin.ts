@@ -8,6 +8,7 @@ import {
   GetSchemaResponse,
   FunctionStatus, FunctionConfig
 } from "@apache-pulsar/pulsar-admin/dist/gen/models";
+import {TopicStats} from '../pulsarAdminProviders/base-provider/topicStats';
 
 export type TPulsarAdmin = {
   providerTypeName: string;
@@ -49,7 +50,10 @@ export type TPulsarAdmin = {
 
   DeleteFunction(tenantName: string, namespaceName: string, functionName: string): Promise<void | undefined>;
 
-  TopicExists(topicType: string, tenantName: string, namespaceName: string, topicName: string): Promise<boolean>
+  TopicExists(topicType: string, tenantName: string, namespaceName: string, topicName: string): Promise<boolean>;
+  TopicStats(topicType:string, tenantName: string, namespaceName: string, topicName: string): Promise<TopicStats | undefined>;
+  TopicProperties(topicType:string, tenantName: string, namespaceName: string, topicName: string): Promise<[{ [key: string]: string; }] | undefined>;
+  DeleteTopic(topicType:string, tenantName: string, namespaceName: string, topicName: string): Promise<void>;
 };
 
 

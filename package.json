@@ -2,7 +2,7 @@
   "name": "develop-for-apache-pulsar",
   "displayName": "Develop for Apache Pulsar",
   "description": "Develop applications that use Apache Pulsar",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "publisher": "DataStax",
   "engines": {
     "vscode": "^1.77.0"
@@ -168,21 +168,36 @@
           "group": "0@1"
         },
         {
-          "command": "extension.vsDevelopPulsarWatchTopicMessages",
-          "when": "view == extension.vsPulsarClusterExplorer && viewItem =~ /vsDevelopPulsar\\.topic/i",
-          "group": "0@1"
-        },
-        {
-          "command": "extension.vsDevelopPulsarShowTopicSchema",
-          "when": "view == extension.vsPulsarClusterExplorer && viewItem =~ /vsDevelopPulsar\\.topic\\..*\\.withSchema/i",
-          "group": "0@2"
-        },
-        {
           "command": "extension.vsDevelopPulsarCreateTopic",
           "when": "view == extension.vsPulsarClusterExplorer && viewItem == vsDevelopPulsar.namespace",
           "group": "0@1"
         },
 
+        {
+          "command": "extension.vsDevelopPulsarTopicStatistics",
+          "when": "view == extension.vsPulsarClusterExplorer && viewItem =~ /vsDevelopPulsar\\.topic/i",
+          "group": "0@1"
+        },
+        {
+          "command": "extension.vsDevelopPulsarTopicProperties",
+          "when": "view == extension.vsPulsarClusterExplorer && viewItem =~ /vsDevelopPulsar\\.topic/i",
+          "group": "0@2"
+        },
+        {
+          "command": "extension.vsDevelopPulsarWatchTopicMessages",
+          "when": "view == extension.vsPulsarClusterExplorer && viewItem =~ /vsDevelopPulsar\\.topic/i",
+          "group": "1@1"
+        },
+        {
+          "command": "extension.vsDevelopPulsarShowTopicSchema",
+          "when": "view == extension.vsPulsarClusterExplorer && viewItem =~ /vsDevelopPulsar\\.topic\\..*\\.withSchema/i",
+          "group": "1@2"
+        },
+        {
+          "command": "extension.vsDevelopPulsarDeleteTopic",
+          "when": "view == extension.vsPulsarClusterExplorer && viewItem =~ /vsDevelopPulsar\\.topic/i",
+          "group": "2@1"
+        },
 
         {
           "command": "extension.vsDevelopPulsarFunctionInfo",
@@ -274,6 +289,21 @@
       {
         "command": "extension.vsDevelopPulsarShowTopicSchema",
         "title": "Schema",
+        "category": "DevelopPulsar"
+      },
+      {
+        "command": "extension.vsDevelopPulsarTopicStatistics",
+        "title": "Statistics",
+        "category": "DevelopPulsar"
+      },
+      {
+        "command": "extension.vsDevelopPulsarTopicProperties",
+        "title": "Properties",
+        "category": "DevelopPulsar"
+      },
+      {
+        "command": "extension.vsDevelopPulsarDeleteTopic",
+        "title": "Delete",
         "category": "DevelopPulsar"
       },
 

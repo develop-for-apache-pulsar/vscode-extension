@@ -9,12 +9,13 @@ This extension provides support for https://pulsar.apache.org/[Apache Pulsar^] i
 
 * Topics
 +
-- Create a topic
+- Create, delete a topic
 - Watch & search topic messages (with websocket)
 - Topic message details (properties, size, timestamp, etc.)
 - Decode schemed messages (JSON, AVRO, PROTOBUF, BYTES, STRING)
 - View message details (properties, size, timestamp, etc.)
 - Get topic schema (if one is present)
+- Get topic statistics, properties
 
 * Functions
 +
@@ -23,6 +24,7 @@ This extension provides support for https://pulsar.apache.org/[Apache Pulsar^] i
 - Watch associated topics (inputs, outputs, log, dead letter)
 - Start, stop, restart, delete function
 - Start, stop function instances
+- Delete function
 
 == Getting Started
 
