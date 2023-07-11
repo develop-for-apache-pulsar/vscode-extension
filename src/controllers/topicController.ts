@@ -7,7 +7,7 @@ import {TreeExplorerController} from "./treeExplorerController";
 import {TopicNode} from "../providers/pulsarClusterTreeDataProvider/nodes/topic";
 import * as YAML from "yaml";
 import TextDocumentHelper from "../utils/textDocumentHelper";
-import {FunctionNode} from "../providers/pulsarClusterTreeDataProvider/nodes/function";
+import * as path from "path";
 
 export default class TopicController {
   @trace('Show Add Cluster Config Wizard')
@@ -126,5 +126,13 @@ export default class TopicController {
       vscode.window.showErrorMessage(`Error deleting topic: ${e}`);
       console.log(e);
     });
+  }
+
+  public static copyTopicAddress(topicNode: TopicNode) {
+    const url = new URL(`${topicNode.topicType}://${topicNode.tenantName}`);
+    url.pathname = path.join(topicNode.namespaceName, topicNode.label);
+
+    vscode.env.clipboard.writeText(url.href.replace(/\\/g, '/'));
+    vscode.window.showInformationMessage(`Topic address copied to clipboard`);
   }
 }

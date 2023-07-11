@@ -60,6 +60,7 @@
     "chai": "^4.3.7",
     "css-loader": "^6.7.3",
     "eslint": "^8.39.0",
+    "fflate": "^0.8.0",
     "file-loader": "^6.2.0",
     "glob": "^8.1.0",
     "mocha": "^10.2.0",
@@ -172,7 +173,11 @@
           "when": "view == extension.vsPulsarClusterExplorer && viewItem == vsDevelopPulsar.namespace",
           "group": "0@1"
         },
-
+        {
+          "command": "extension.vsDevelopPulsarCreateFunction",
+          "when": "view == extension.vsPulsarClusterExplorer && viewItem == vsDevelopPulsar.namespace",
+          "group": "0@2"
+        },
         {
           "command": "extension.vsDevelopPulsarTopicStatistics",
           "when": "view == extension.vsPulsarClusterExplorer && viewItem =~ /vsDevelopPulsar\\.topic/i",
@@ -182,6 +187,11 @@
           "command": "extension.vsDevelopPulsarTopicProperties",
           "when": "view == extension.vsPulsarClusterExplorer && viewItem =~ /vsDevelopPulsar\\.topic/i",
           "group": "0@2"
+        },
+        {
+          "command": "extension.vsDevelopPulsarTopicCopyAddress",
+          "when": "view == extension.vsPulsarClusterExplorer && viewItem =~ /vsDevelopPulsar\\.topic/i",
+          "group": "0@3"
         },
         {
           "command": "extension.vsDevelopPulsarWatchTopicMessages",
@@ -198,7 +208,6 @@
           "when": "view == extension.vsPulsarClusterExplorer && viewItem =~ /vsDevelopPulsar\\.topic/i",
           "group": "2@1"
         },
-
         {
           "command": "extension.vsDevelopPulsarFunctionInfo",
           "when": "view == extension.vsPulsarClusterExplorer && viewItem =~ /vsDevelopPulsar\\.function\\.function\\..*/i",
@@ -239,8 +248,6 @@
           "when": "view == extension.vsPulsarClusterExplorer && viewItem =~ /vsDevelopPulsar\\.function\\.function\\..*/i",
           "group": "2@0"
         },
-
-
         {
           "command": "extension.vsDevelopPulsarStartFunctionInstance",
           "when": "view == extension.vsPulsarClusterExplorer && viewItem =~ /vsDevelopPulsar\\.function\\.instance\\..*\\.stopped/i",
@@ -283,7 +290,12 @@
       },
       {
         "command": "extension.vsDevelopPulsarCreateTopic",
-        "title": "Create topic",
+        "title": "New topic",
+        "category": "DevelopPulsar"
+      },
+      {
+        "command": "extension.vsDevelopPulsarCreateFunction",
+        "title": "New function",
         "category": "DevelopPulsar"
       },
       {
@@ -297,6 +309,11 @@
         "category": "DevelopPulsar"
       },
       {
+        "command": "extension.vsDevelopPulsarTopicCopyAddress",
+        "title": "Copy address",
+        "category": "DevelopPulsar"
+      },
+      {
         "command": "extension.vsDevelopPulsarTopicProperties",
         "title": "Properties",
         "category": "DevelopPulsar"
@@ -306,8 +323,6 @@
         "title": "Delete",
         "category": "DevelopPulsar"
       },
-
-
       {
         "command": "extension.vsDevelopPulsarStartFunction",
         "title": "Start",
@@ -348,8 +363,6 @@
         "title": "Delete",
         "category": "DevelopPulsar"
       },
-
-
       {
         "command": "extension.vsDevelopPulsarStartFunctionInstance",
         "title": "Start",

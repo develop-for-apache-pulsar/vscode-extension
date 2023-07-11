@@ -10,8 +10,57 @@ import {ITopicNode, TopicNode} from "../providers/pulsarClusterTreeDataProvider/
 import TopicMessageController from "./topicMessageController";
 import TopicController from "./topicController";
 import {TPulsarAdmin} from "../types/tPulsarAdmin";
+import {TSavedProviderConfig} from "../types/tSavedProviderConfig";
+import {TPulsarAdminProviderCluster} from "../types/tPulsarAdminProviderCluster";
+import {TPulsarAdminProviderTenant} from "../types/tPulsarAdminProviderTenant";
+import {FunctionConfig, FunctionConfigRuntimeEnum, FunctionStatus} from "@apache-pulsar/pulsar-admin/dist/gen/models";
+import * as fs from "fs";
+import * as fflate from "fflate";
+import ErrnoException = NodeJS.ErrnoException;
+import * as path from "path";
+import {NamespaceNode} from "../providers/pulsarClusterTreeDataProvider/nodes/namespace";
+import * as assert from "assert";
+import {set} from "yaml/dist/schema/yaml-1.1/set";
 
 export default class FunctionController {
+  public static chooseFunctionPackage(runtimeType: FunctionConfigRuntimeEnum, range: vscode.Range, fileFilters?: {[p: string]: string[]}): void {
+    const opts: vscode.OpenDialogOptions = {
+      canSelectFiles: (fileFilters !== undefined),
+      canSelectFolders: (fileFilters === undefined),
+      canSelectMany: false,
+      openLabel: `Select ${(fileFilters !== undefined) ? 'file' : 'folder'}`,
+      filters: fileFilters
+    };
+
+    vscode.window.showOpenDialog(opts).then((uris: vscode.Uri[] | undefined) => {
+      if(uris === undefined) {
+        return;
+      }
+
+      const uri = uris[0]; // Only one file can be selected
+
+      // Find the range in the current document and replace with the path
+      const editor = vscode.window.activeTextEditor;
+      if(editor === undefined) {
+        return;
+      }
+
+      const document = editor.document;
+      const text = document.lineAt(range.start.line).text;
+      if(text === undefined) {
+        return;
+      }
+
+      const newText = text.replace(/(?<=:).*/i, ` ${uri.fsPath}`);
+
+      editor.edit(editBuilder => {
+        editBuilder.replace(document.lineAt(range.start.line).range, newText);
+      });
+    });
+
+    // no op on error
+  }
+
   @trace('Start Function')
   public static startFunction(functionNode: FunctionNode, pulsarClusterTreeProvider: PulsarClusterTreeDataProvider): void {
     functionNode.pulsarAdmin.StartFunction(functionNode.tenantName, functionNode.namespaceName, functionNode.label).then(() => {
@@ -324,6 +373,28 @@ export default class FunctionController {
     });
   }
 
+  @trace('Show new function template')
+  public static async showNewFunctionTemplate(explorerNode: NamespaceNode) {
+    const newFunctionTemplate: any = {
+      tenant: explorerNode.tenantName,
+      namespace: explorerNode.label,
+      name: '',
+      className: '',
+      inputs: [],
+      parallelism: 1,
+      output: null,
+      logTopic: null,
+      deadLetterTopic: null,
+      autoAck: true,
+      py: null,
+      go: null,
+      jar: null
+    };
+
+    const documentContent = YAML.stringify(newFunctionTemplate, null, 2);
+    await TextDocumentHelper.openDocument(documentContent, 'yaml');
+  }
+
   private static parseInstanceId(instanceId: string): number | undefined {
     try{
       return parseInt(instanceId);
@@ -401,5 +472,271 @@ export default class FunctionController {
       topicTenant,
       topicNamespace,
       undefined);
+  }
+
+  public static async deployFunction(context:vscode.ExtensionContext, functionConfig: FunctionConfig,
+                                     providerConfig: TSavedProviderConfig,
+                                     providerCluster: TPulsarAdminProviderCluster,
+                                     providerTenant: TPulsarAdminProviderTenant,
+                                     pulsarAdmin: TPulsarAdmin): Promise<void>;
+  public static async deployFunction(context:vscode.ExtensionContext, functionConfig: FunctionConfig, clusterConfigs: TSavedProviderConfig[]): Promise<void>;
+  public static async deployFunction(context:vscode.ExtensionContext, functionConfig: FunctionConfig,
+                                     providerConfigOrArray: TSavedProviderConfig | TSavedProviderConfig[],
+                                     providerCluster?: TPulsarAdminProviderCluster,
+                                     providerTenant?: TPulsarAdminProviderTenant,
+                                     pulsarAdmin?: TPulsarAdmin ): Promise<void> {
+    let providerConfig: TSavedProviderConfig;
+
+    if(!Array.isArray(providerConfigOrArray)) {
+      if(providerCluster === undefined) {
+        vscode.window.showErrorMessage("Cluster information is required if a provider config is provided");
+        return;
+      }
+
+      if(providerTenant === undefined) {
+        vscode.window.showErrorMessage("Tenant information is required if a provider config is provided");
+        return;
+      }
+
+      if(pulsarAdmin === undefined) {
+        vscode.window.showErrorMessage("Pulsar admin information is required if a provider config is provided");
+        return;
+      }
+
+      providerConfig = providerConfigOrArray as TSavedProviderConfig;
+    }
+
+    //functionConfig = this.matchInputs(functionConfig);
+
+    // Validate function config
+    try{
+      this.validateFunctionConfig(functionConfig);
+    }catch(e: any){
+      vscode.window.showErrorMessage(e.message);
+      return;
+    }
+
+    // Find file
+    let functionFile = this.findFunctionFilePath(functionConfig);
+    if(functionFile === undefined) {
+      vscode.window.showErrorMessage("Provide a valid file path for either 'py', 'jar', or 'go'.");
+      return;
+    }
+
+    // Zip if it's a directory
+    if(fs.lstatSync(functionFile).isDirectory()) {
+      const zipFile = await this.zipFolder(functionFile);
+
+      if(!fs.existsSync(context.globalStorageUri.fsPath)) {
+        fs.mkdirSync(context.globalStorageUri.fsPath);
+      }
+
+      const functionZipUri = vscode.Uri.file(path.join(context.globalStorageUri.fsPath, `${functionConfig.name}.zip`));
+
+      // // Save the zip file as a stream
+      await fs.writeFile(functionZipUri.fsPath, zipFile, (err: ErrnoException | null) => {
+        if (err) {
+          console.log(err);
+          vscode.window.showErrorMessage(`An error occurred while zipping the folder - ${err.message}`);
+        }
+      });
+
+      //vscode.workspace.fs.writeFile(fileUri, zipFile);
+      functionFile = functionZipUri.fsPath;
+    }
+
+    // Validate the file
+    if(!fs.existsSync(functionFile)) {
+      vscode.window.showErrorMessage(`File ${functionFile} does not exist`);
+    }
+
+    if(Array.isArray(providerConfigOrArray)) {
+      const clusterNames = [""];
+
+      providerConfigOrArray.forEach(clusterConfig => {
+        clusterConfig.clusters.forEach(cluster => {
+          clusterNames.push(`${clusterConfig.name}/${cluster.name}`);
+        });
+      });
+
+      // Prompt to choose cluster
+      const selectedProviderCluster = await vscode.window.showQuickPick(clusterNames, { title:"Choose the provider/cluster", canPickMany: false });
+      if (selectedProviderCluster === undefined) {
+        return;
+      }
+
+      const [selectedClusterConfig, selectedClusterName] = selectedProviderCluster.split("/");
+
+      providerConfig = <TSavedProviderConfig>providerConfigOrArray.find(clusterConfig => {return (clusterConfig.name === selectedClusterConfig);}); //Yes it's forceful
+      providerCluster = providerConfig!.clusters.find(cluster => {return (cluster.name === selectedClusterName);});
+      providerTenant = providerCluster!.tenants.find(tenant => {return (tenant.name === functionConfig.tenant); });
+
+      const providerClass = require(`../pulsarAdminProviders/${providerConfig!.providerTypeName}/provider`);
+      pulsarAdmin = new providerClass.Provider(providerCluster!.webServiceUrl, providerTenant!.pulsarToken);
+    }
+
+    // Attempt to delete the function if it already exists
+    try{
+      await pulsarAdmin!.DeleteFunction(<string>functionConfig.tenant, <string>functionConfig.namespace, <string>functionConfig.name);
+    }catch (e:any) {
+      // no op
+    }
+
+    // Register function and wait
+    pulsarAdmin!.CreateFunction(functionConfig, functionFile).then(() => {
+      vscode.window.withProgress({
+        location: vscode.ProgressLocation.Notification,
+        title: "Deploying function",
+        cancellable: true
+      }, (progress, token) => {
+        token.onCancellationRequested(() => {
+          console.log("User canceled the long running operation");
+        });
+
+        progress.report({ increment: 0, message: "Instances: 0 Running: 0"}); //Bump progress to show things are happening
+
+        return new Promise<void>((resolve, reject) => {
+          let interval:any = null;
+
+          const timeout = setTimeout(() => {
+            clearInterval(interval);
+            reject("Function deployment timed out");
+          }, (100 * 1000)); //timeout after 100 seconds - it's 100 because we're polling every second and reporting progress
+
+          try{
+            // Poll status every second
+            interval = setInterval(async () => {
+              const status:any = await pulsarAdmin!.FunctionStatus(<string>functionConfig.tenant, <string>functionConfig.namespace, <string>functionConfig.name);
+              if(status === undefined) {
+                return;
+              }
+
+              const funcStatus = status as FunctionStatus;
+              progress.report({ increment: 1, message: "Instances: " + funcStatus.numInstances + " Running: " + funcStatus.numRunning });
+
+              if(<number>funcStatus.numInstances === 0) {
+                return;
+              }
+
+              // Pop the progress to show the function is starting
+              progress.report({ increment: (80/<number>funcStatus.numInstances), message: "Instances: " + funcStatus.numInstances + " Running: " + funcStatus.numRunning });
+
+              if (funcStatus.numRunning === funcStatus.numInstances) {
+                clearTimeout(timeout);
+                clearInterval(interval);
+                resolve();
+              }
+            }, 1000);
+          }catch (e) {
+            // Function Status pooling error
+            reject(e);
+          }
+        });
+      }).then();
+    }).catch(async (e: any) => {
+      // CreateFunction Error
+      console.log(e);
+
+      try {
+        const reason = (e.data ? e.data.reason : e.response!.data.reason);
+        vscode.window.showErrorMessage(`An error occurred trying to deploy the function, '${reason.toLowerCase()}'`);
+      } catch (e2: any) {
+        vscode.window.showErrorMessage(`An error occurred trying to register the function, '${e?.message.toLowerCase()}'`);
+        return;
+      }
+    });
+  }
+
+  private static findFunctionFilePath(functionConfig: FunctionConfig): string | undefined {
+    if(functionConfig.jar !== undefined && functionConfig.jar !== null && functionConfig.jar !== "null" && functionConfig.jar.length > 0) {
+      return functionConfig.jar;
+    }
+
+    if(functionConfig.py !== undefined && functionConfig.py !== null && functionConfig.py !== "null" && functionConfig.py.length > 0) {
+      return functionConfig.py;
+    }
+
+    if(functionConfig.go !== undefined && functionConfig.go !== null && functionConfig.go !== "null" && functionConfig.go.length > 0) {
+      return functionConfig.go;
+    }
+
+    return undefined;
+  }
+
+  private static async zipFolder(pathLike: fs.PathLike): Promise<Uint8Array> {
+    const a: any = this.defFolder(pathLike);
+    return fflate.zipSync(a);
+  }
+
+  private static defFolder(pathLike: fs.PathLike): {} {
+    const a: any = {};
+    fs.readdirSync(pathLike, { withFileTypes: true }).forEach((value: fs.Dirent) => {
+      if(value.isFile()) {
+        a[value.name] = fs.readFileSync(`${pathLike}/${value.name}`);
+      }
+      if(value.isDirectory()) {
+        a[value.name] = this.defFolder(`${pathLike}/${value.name}`);
+      }
+    });
+    return a;
+  };
+
+  public static validateFunctionConfig(functionConfig: FunctionConfig): void {
+    assert(functionConfig !== undefined, "functionConfig is required");
+
+    functionConfig.tenant = functionConfig.tenant?.trim()
+                              .replace(/'null'/g, "") //do this before the rest in case the name has "null" in it
+                              .replace(/"null"/g, "")
+                              .replace(/^\bnull\b$/i, "")
+                              .replace(/"/g, "")
+                              .replace(/'/g, "")
+                              .replace(/`/g, "");
+
+    assert(functionConfig.tenant !== undefined && functionConfig.tenant !== null && functionConfig.tenant.length > 1, "'tenant' is required");
+
+    assert(functionConfig.namespace !== undefined && functionConfig.namespace !== null && functionConfig.namespace !== "\"\"" && functionConfig.namespace !== "null", "'namespace' is required");
+
+    assert(functionConfig.name !== undefined && functionConfig.name !== null && functionConfig.name !== "\"\"" && functionConfig.name !== "null", "'name' is required");
+
+    assert(functionConfig.parallelism !== undefined && functionConfig.parallelism !== null, "'parallelism' is required");
+    assert(functionConfig.parallelism > 0, "'parallelism' should be greater than zero");
+
+    assert((functionConfig.py !== undefined && functionConfig.py !== null && functionConfig.py !== "null" && functionConfig.py !== "\"null\"" && functionConfig.py !== "\"\"" && functionConfig.py.length > 0)
+            || (functionConfig.go !== undefined && functionConfig.go !== null && functionConfig.go !== "null" && functionConfig.go !== "\"null\"" && functionConfig.go !== "\"\"" && functionConfig.go.length > 0)
+            || (functionConfig.jar !== undefined && functionConfig.jar !== null && functionConfig.jar !== "null" && functionConfig.jar !== "\"null\"" && functionConfig.jar !== "\"\"" && functionConfig.jar.length > 0), "provide either 'py', 'jar'" +
+      " or 'go'");
+
+    if((functionConfig.py !== undefined && functionConfig.py !== null && functionConfig.py !== "null")
+        || (functionConfig.jar !== undefined && functionConfig.jar !== null && functionConfig.jar !== "null") ) {
+      assert(functionConfig.className !== undefined && functionConfig.className !== null && functionConfig.className !== "\"\"" && functionConfig.className !== "null", "'className' is required");
+    }
+
+    assert(functionConfig.inputs !== undefined && functionConfig.inputs !== null, "the 'inputs' collection is required");
+    assert(functionConfig.inputs.length > 0, "'inputs' needs at least 1 topic");
+    assert(!functionConfig.inputs.includes("null") && !functionConfig.inputs.includes(""), "'inputs' has an invalid topic name");
+  }
+
+  public static matchInputs(functionConfig: FunctionConfig): FunctionConfig {
+    if(functionConfig.inputs === undefined || functionConfig.inputs === null){
+      functionConfig.inputs = [];
+    }
+
+    if(functionConfig.inputSpecs === undefined){
+      return functionConfig;
+    }
+
+    const inputSpecKeys = Object.keys(functionConfig.inputSpecs);
+
+    if(inputSpecKeys.length < 1){
+      return functionConfig;
+    }
+
+    for (const inputSpecKey of inputSpecKeys) {
+      if(functionConfig.inputs?.find((inputTopic) => { return (inputTopic.toLowerCase() === inputSpecKey.toLowerCase()); }) === undefined){
+        functionConfig.inputs.push(inputSpecKey);
+      }
+    }
+
+    return functionConfig;
   }
 }

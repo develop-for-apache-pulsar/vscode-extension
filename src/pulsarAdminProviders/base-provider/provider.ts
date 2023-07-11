@@ -15,6 +15,9 @@ import {
 } from "@apache-pulsar/pulsar-admin/dist/gen/models";
 import axios, {Axios, AxiosRequestConfig, AxiosResponse} from "axios";
 import {TopicStats} from "./topicStats";
+import * as path from "path";
+import * as fs from "fs";
+import {Blob} from "buffer";
 
 export class BaseProvider implements TPulsarAdmin {
   protected readonly client: PulsarAdmin;
@@ -47,12 +50,12 @@ export class BaseProvider implements TPulsarAdmin {
         reject(response);
       }).catch((err: any) => {
         if(this.shouldRejectError(err)) {
-          console.log("Request rejected");
+          //console.log("Request rejected");
           reject(err);
           return;
         }
 
-        console.log("Request not rejected, returning default value");
+        //console.log("Request not rejected, returning default value");
         resolve(def);
       });
     });
@@ -277,10 +280,13 @@ export class BaseProvider implements TPulsarAdmin {
         options.headers!.Authorization = 'Bearer ' + this.pulsarToken;
       }
 
-      const resp: AxiosResponse = await new Axios(options).put(this.webServiceUrl + '/admin/v2/' + topicType + '/' + tenantName + '/' + namespaceName + '/' + topicName);
+      const url = new URL(this.webServiceUrl);
+      url.pathname = path.join("admin", "v2", topicType, tenantName, namespaceName, topicName);
+
+      const resp: AxiosResponse = await new Axios(options).put(url.toString());
 
       if(resp.status > 199 && resp.status < 300) {
-        await new Axios(options).delete(this.webServiceUrl + '/admin/v2/' + topicType + '/' + tenantName + '/' + namespaceName + '/' + topicName);
+        await new Axios(options).delete(url.toString());
       }
 
       resolve((resp.status === 409)); // This topic already exists
@@ -312,6 +318,29 @@ export class BaseProvider implements TPulsarAdmin {
     }
 
     return this.QueryPulsarAdminClient<void>(this.client.nonPersistentTopic().deleteTopic(tenantName, namespaceName, topicName), undefined);
+  }
+
+  @trace('Base: Create function')
+  public async CreateFunction(functionConfig: FunctionConfig, filePath: fs.PathLike): Promise<void> {
+    const options: AxiosRequestConfig = {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      },
+      baseURL: this.webServiceUrl,
+      transformRequest: axios.defaults.transformRequest,
+      transformResponse: axios.defaults.transformResponse,
+    };
+
+    if(this.pulsarToken) {
+      options.headers!.Authorization = 'Bearer ' + this.pulsarToken;
+    }
+
+    const url = new URL(this.webServiceUrl);
+    url.pathname = path.join("admin", "v3", "functions", <string>functionConfig.tenant, <string>functionConfig.namespace, <string>functionConfig.name);
+
+    return this.QueryPulsarAdminClient<void>(
+      new Axios(options).post(url.href, {functionConfig: JSON.stringify(functionConfig), data: fs.createReadStream(filePath)}),
+      undefined);
   }
 }
 

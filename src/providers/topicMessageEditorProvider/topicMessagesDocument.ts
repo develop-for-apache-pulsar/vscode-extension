@@ -103,7 +103,7 @@ export default class TopicMessagesDocument implements vscode.CustomDocument {
     console.log("Saving file contents as: %o", targetResource);
     console.log("File contents: %o", this.content.toJson());
 
-    fs.writeFile(targetResource.fsPath, this.content.toJson(), (err: ErrnoException | null) => {
+    await fs.writeFile(targetResource.fsPath, this.content.toJson(), (err: ErrnoException | null) => {
       if (err) {
         console.log(err);
         throw new Error(`An error occurred trying to save the pulsar file - ${err.message}`); //let vscode handle the error
