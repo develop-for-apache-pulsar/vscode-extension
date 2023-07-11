@@ -133,6 +133,5 @@ export default class TopicController {
     url.pathname = path.join(topicNode.namespaceName, topicNode.label);
 
     vscode.env.clipboard.writeText(url.href.replace(/\\/g, '/'));
-    vscode.window.showInformationMessage(`Topic address copied to clipboard`);
   }
 }

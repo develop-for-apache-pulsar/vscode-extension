@@ -13,7 +13,7 @@ import {TPulsarAdmin} from "../types/tPulsarAdmin";
 import {TSavedProviderConfig} from "../types/tSavedProviderConfig";
 import {TPulsarAdminProviderCluster} from "../types/tPulsarAdminProviderCluster";
 import {TPulsarAdminProviderTenant} from "../types/tPulsarAdminProviderTenant";
-import {FunctionConfig, FunctionConfigRuntimeEnum, FunctionStatus} from "@apache-pulsar/pulsar-admin/dist/gen/models";
+import {FunctionConfig, FunctionConfigRuntimeEnum, FunctionInstanceStatus, FunctionStatus} from "@apache-pulsar/pulsar-admin/dist/gen/models";
 import * as fs from "fs";
 import * as fflate from "fflate";
 import ErrnoException = NodeJS.ErrnoException;
@@ -21,6 +21,7 @@ import * as path from "path";
 import {NamespaceNode} from "../providers/pulsarClusterTreeDataProvider/nodes/namespace";
 import * as assert from "assert";
 import {set} from "yaml/dist/schema/yaml-1.1/set";
+import {PathLike} from "fs";
 
 export default class FunctionController {
   public static chooseFunctionPackage(runtimeType: FunctionConfigRuntimeEnum, range: vscode.Range, fileFilters?: {[p: string]: string[]}): void {
@@ -388,7 +389,8 @@ export default class FunctionController {
       autoAck: true,
       py: null,
       go: null,
-      jar: null
+      jar: null,
+      userConfig: null
     };
 
     const documentContent = YAML.stringify(newFunctionTemplate, null, 2);
@@ -474,19 +476,20 @@ export default class FunctionController {
       undefined);
   }
 
-  public static async deployFunction(context:vscode.ExtensionContext, functionConfig: FunctionConfig,
+  public static async deployFunction(pulsarClusterTreeProvider: PulsarClusterTreeDataProvider, context:vscode.ExtensionContext, functionConfig: FunctionConfig,
                                      providerConfig: TSavedProviderConfig,
                                      providerCluster: TPulsarAdminProviderCluster,
                                      providerTenant: TPulsarAdminProviderTenant,
                                      pulsarAdmin: TPulsarAdmin): Promise<void>;
-  public static async deployFunction(context:vscode.ExtensionContext, functionConfig: FunctionConfig, clusterConfigs: TSavedProviderConfig[]): Promise<void>;
-  public static async deployFunction(context:vscode.ExtensionContext, functionConfig: FunctionConfig,
+  public static async deployFunction(pulsarClusterTreeProvider: PulsarClusterTreeDataProvider, context:vscode.ExtensionContext, functionConfig: FunctionConfig, clusterConfigs: TSavedProviderConfig[]): Promise<void>;
+  public static async deployFunction(pulsarClusterTreeProvider: PulsarClusterTreeDataProvider, context:vscode.ExtensionContext, functionConfig: FunctionConfig,
                                      providerConfigOrArray: TSavedProviderConfig | TSavedProviderConfig[],
                                      providerCluster?: TPulsarAdminProviderCluster,
                                      providerTenant?: TPulsarAdminProviderTenant,
                                      pulsarAdmin?: TPulsarAdmin ): Promise<void> {
     let providerConfig: TSavedProviderConfig;
 
+    // Make sure all the parts have been provided
     if(!Array.isArray(providerConfigOrArray)) {
       if(providerCluster === undefined) {
         vscode.window.showErrorMessage("Cluster information is required if a provider config is provided");
@@ -508,14 +511,6 @@ export default class FunctionController {
 
     //functionConfig = this.matchInputs(functionConfig);
 
-    // Validate function config
-    try{
-      this.validateFunctionConfig(functionConfig);
-    }catch(e: any){
-      vscode.window.showErrorMessage(e.message);
-      return;
-    }
-
     // Find file
     let functionFile = this.findFunctionFilePath(functionConfig);
     if(functionFile === undefined) {
@@ -523,7 +518,7 @@ export default class FunctionController {
       return;
     }
 
-    // Zip if it's a directory
+    // Zip the package if it's a directory
     if(fs.lstatSync(functionFile).isDirectory()) {
       const zipFile = await this.zipFolder(functionFile);
 
@@ -531,25 +526,32 @@ export default class FunctionController {
         fs.mkdirSync(context.globalStorageUri.fsPath);
       }
 
-      const functionZipUri = vscode.Uri.file(path.join(context.globalStorageUri.fsPath, `${functionConfig.name}.zip`));
+      const zipPromise = new Promise<vscode.Uri>(async (resolve, reject) => {
+        const functionZipUri = vscode.Uri.file(path.join(context.globalStorageUri.fsPath, `${functionConfig.name}.zip`));
 
-      // // Save the zip file as a stream
-      await fs.writeFile(functionZipUri.fsPath, zipFile, (err: ErrnoException | null) => {
-        if (err) {
-          console.log(err);
-          vscode.window.showErrorMessage(`An error occurred while zipping the folder - ${err.message}`);
-        }
+        // // Save the zip file as a stream
+        await fs.writeFile(functionZipUri.fsPath, zipFile, (err: ErrnoException | null) => {
+          if (err) {
+            reject(err);
+          }
+
+          resolve(functionZipUri);
+        });
       });
 
-      //vscode.workspace.fs.writeFile(fileUri, zipFile);
-      functionFile = functionZipUri.fsPath;
+      await zipPromise.then((zipUri: vscode.Uri) => {
+        functionFile = zipUri.fsPath;
+      }).catch((err: any) => {
+        throw new Error(`An error occurred while zipping the folder - ${err.message}`);
+      });
     }
 
-    // Validate the file
+    // Validate the function package exists
     if(!fs.existsSync(functionFile)) {
-      vscode.window.showErrorMessage(`File ${functionFile} does not exist`);
+      throw new Error(`File ${functionFile} does not exist`);
     }
 
+    // Show the cluster chooser if we don't have a cluster
     if(Array.isArray(providerConfigOrArray)) {
       const clusterNames = [""];
 
@@ -586,63 +588,105 @@ export default class FunctionController {
     pulsarAdmin!.CreateFunction(functionConfig, functionFile).then(() => {
       vscode.window.withProgress({
         location: vscode.ProgressLocation.Notification,
-        title: "Deploying function",
+        title: "Deploy function",
         cancellable: true
       }, (progress, token) => {
-        token.onCancellationRequested(() => {
-          console.log("User canceled the long running operation");
-        });
+        // token.onCancellationRequested(() => {
+        //   console.log("User canceled the long running operation");
+        // });
 
-        progress.report({ increment: 0, message: "Instances: 0 Running: 0"}); //Bump progress to show things are happening
+        progress.report({ increment: 0, message: "starting"}); //Bump progress to show things are happening
 
-        return new Promise<void>((resolve, reject) => {
+        return new Promise<boolean>((resolve, reject) => {
           let interval:any = null;
 
           const timeout = setTimeout(() => {
             clearInterval(interval);
-            reject("Function deployment timed out");
-          }, (100 * 1000)); //timeout after 100 seconds - it's 100 because we're polling every second and reporting progress
+            reject(new Error("Function deployment timed out"));
+            return;
+          }, (200 * 1000));
 
-          try{
-            // Poll status every second
-            interval = setInterval(async () => {
-              const status:any = await pulsarAdmin!.FunctionStatus(<string>functionConfig.tenant, <string>functionConfig.namespace, <string>functionConfig.name);
+          // Poll status every second
+          interval = setInterval(async () => {
+            let status: any;
+            let errorCnt = 0;
+
+            try{
+              status = await pulsarAdmin!.FunctionStatus(<string>functionConfig.tenant, <string>functionConfig.namespace, <string>functionConfig.name);
               if(status === undefined) {
-                return;
+                return; //let the interval continue
               }
+            }catch (e:any) {
+              errorCnt++;
 
-              const funcStatus = status as FunctionStatus;
-              progress.report({ increment: 1, message: "Instances: " + funcStatus.numInstances + " Running: " + funcStatus.numRunning });
-
-              if(<number>funcStatus.numInstances === 0) {
-                return;
-              }
-
-              // Pop the progress to show the function is starting
-              progress.report({ increment: (80/<number>funcStatus.numInstances), message: "Instances: " + funcStatus.numInstances + " Running: " + funcStatus.numRunning });
-
-              if (funcStatus.numRunning === funcStatus.numInstances) {
-                clearTimeout(timeout);
+              if(errorCnt > 4){
                 clearInterval(interval);
-                resolve();
+                clearTimeout(timeout);
+                reject(e);
               }
-            }, 1000);
-          }catch (e) {
-            // Function Status pooling error
-            reject(e);
-          }
-        });
-      }).then();
-    }).catch(async (e: any) => {
-      // CreateFunction Error
-      console.log(e);
+            }
 
+            const funcStatus = <FunctionStatus>status;
+
+            progress.report({ increment: 1, message: "instances: " + funcStatus.numInstances + " running: " + funcStatus.numRunning });
+
+            if(<number>funcStatus.numInstances === 0) {
+              return; //let the interval continue
+            }
+
+            const errorInstance = funcStatus.instances?.find((instance: FunctionInstanceStatus) => { return ((instance.status?.error?.length ?? 0) > 1); });
+
+            if(errorInstance === undefined) {
+              // Pop the progress to show the function is starting
+              progress.report({increment: (80 / <number>funcStatus.numInstances), message: "instances: " + funcStatus.numInstances + " running: " + funcStatus.numRunning});
+            } else {
+              clearTimeout(timeout);
+              clearInterval(interval);
+              reject(new Error(`instance ${errorInstance.instanceId} - ${errorInstance.status?.error}`));
+            }
+
+            if (token.isCancellationRequested || funcStatus.numRunning === funcStatus.numInstances) {
+              clearTimeout(timeout);
+              clearInterval(interval);
+
+              if (token.isCancellationRequested) {
+                try {
+                  await pulsarAdmin!.DeleteFunction(<string>functionConfig.tenant, <string>functionConfig.namespace, <string>functionConfig.name);
+                } catch (e: any) {
+                  // no op
+                }
+              }
+
+              resolve(token.isCancellationRequested);
+              return;
+            }
+          }, 1500);
+        });
+      }).then( (cancelled) => {
+          pulsarClusterTreeProvider.refresh();
+
+          if(cancelled) {
+            vscode.window.showInformationMessage("Function deployment cancelled");
+            return;
+          }
+
+          vscode.window.showInformationMessage("Function deployed successfully");
+        }, (e: any) => {
+          pulsarClusterTreeProvider.refresh();
+
+          try {
+            const reason = (e.data ? e.data.reason : e.response!.data.reason);
+            vscode.window.showErrorMessage(`An error occurred trying to deploy the function, '${reason.toLowerCase()}'`);
+          } catch (e2: any) {
+            vscode.window.showErrorMessage(`An error occurred trying to register the function, '${e?.message.toLowerCase()}'`);
+          }
+      });
+    }).catch(async (e: any) => {
       try {
         const reason = (e.data ? e.data.reason : e.response!.data.reason);
         vscode.window.showErrorMessage(`An error occurred trying to deploy the function, '${reason.toLowerCase()}'`);
       } catch (e2: any) {
-        vscode.window.showErrorMessage(`An error occurred trying to register the function, '${e?.message.toLowerCase()}'`);
-        return;
+        vscode.window.showErrorMessage(`Function failed to start, ${e?.message.toLowerCase()}`);
       }
     });
   }
@@ -681,39 +725,87 @@ export default class FunctionController {
     return a;
   };
 
+  public static normalizeFunctionConfigValues(functionConfig: FunctionConfig): FunctionConfig {
+    functionConfig.tenant = functionConfig.tenant?.trim()
+      .replace(/'null'/g, "") //do this before the rest in case the name has "null" in it
+      .replace(/"null"/g, "")
+      .replace(/^\bnull\b$/i, "")
+      .replace(/"/g, "")
+      .replace(/'/g, "")
+      .replace(/`/g, "");
+
+    functionConfig.namespace = functionConfig.namespace?.trim()
+      .replace(/'null'/g, "") //do this before the rest in case the name has "null" in it
+      .replace(/"null"/g, "")
+      .replace(/^\bnull\b$/i, "")
+      .replace(/"/g, "")
+      .replace(/'/g, "")
+      .replace(/`/g, "");
+
+    functionConfig.name = functionConfig.name?.trim()
+      .replace(/'null'/g, "") //do this before the rest in case the name has "null" in it
+      .replace(/"null"/g, "")
+      .replace(/^\bnull\b$/i, "")
+      .replace(/"/g, "")
+      .replace(/'/g, "")
+      .replace(/`/g, "");
+
+    functionConfig.py = functionConfig.py?.trim()
+      .replace(/'null'/g, "") //do this before the rest in case the name has "null" in it
+      .replace(/"null"/g, "")
+      .replace(/^\bnull\b$/i, "")
+      .replace(/"/g, "")
+      .replace(/'/g, "")
+      .replace(/`/g, "");
+
+    functionConfig.go = functionConfig.go?.trim()
+      .replace(/'null'/g, "") //do this before the rest in case the name has "null" in it
+      .replace(/"null"/g, "")
+      .replace(/^\bnull\b$/i, "")
+      .replace(/"/g, "")
+      .replace(/'/g, "")
+      .replace(/`/g, "");
+
+    functionConfig.jar = functionConfig.jar?.trim()
+      .replace(/'null'/g, "") //do this before the rest in case the name has "null" in it
+      .replace(/"null"/g, "")
+      .replace(/^\bnull\b$/i, "")
+      .replace(/"/g, "")
+      .replace(/'/g, "")
+      .replace(/`/g, "");
+
+    functionConfig.className = functionConfig.className?.trim()
+      .replace(/'null'/g, "") //do this before the rest in case the name has "null" in it
+      .replace(/"null"/g, "")
+      .replace(/^\bnull\b$/i, "")
+      .replace(/"/g, "")
+      .replace(/'/g, "")
+      .replace(/`/g, "");
+
+    return functionConfig;
+  }
+
   public static validateFunctionConfig(functionConfig: FunctionConfig): void {
     assert(functionConfig !== undefined, "functionConfig is required");
 
-    functionConfig.tenant = functionConfig.tenant?.trim()
-                              .replace(/'null'/g, "") //do this before the rest in case the name has "null" in it
-                              .replace(/"null"/g, "")
-                              .replace(/^\bnull\b$/i, "")
-                              .replace(/"/g, "")
-                              .replace(/'/g, "")
-                              .replace(/`/g, "");
-
-    assert(functionConfig.tenant !== undefined && functionConfig.tenant !== null && functionConfig.tenant.length > 1, "'tenant' is required");
-
-    assert(functionConfig.namespace !== undefined && functionConfig.namespace !== null && functionConfig.namespace !== "\"\"" && functionConfig.namespace !== "null", "'namespace' is required");
-
-    assert(functionConfig.name !== undefined && functionConfig.name !== null && functionConfig.name !== "\"\"" && functionConfig.name !== "null", "'name' is required");
+    assert(functionConfig.tenant !== undefined && functionConfig.tenant.length > 1, "'tenant' is required");
+    assert(functionConfig.namespace !== undefined && functionConfig.namespace.length > 1, "'namespace' is required");
+    assert(functionConfig.name !== undefined && functionConfig.name.length > 1, "'name' is required");
 
     assert(functionConfig.parallelism !== undefined && functionConfig.parallelism !== null, "'parallelism' is required");
     assert(functionConfig.parallelism > 0, "'parallelism' should be greater than zero");
 
-    assert((functionConfig.py !== undefined && functionConfig.py !== null && functionConfig.py !== "null" && functionConfig.py !== "\"null\"" && functionConfig.py !== "\"\"" && functionConfig.py.length > 0)
-            || (functionConfig.go !== undefined && functionConfig.go !== null && functionConfig.go !== "null" && functionConfig.go !== "\"null\"" && functionConfig.go !== "\"\"" && functionConfig.go.length > 0)
-            || (functionConfig.jar !== undefined && functionConfig.jar !== null && functionConfig.jar !== "null" && functionConfig.jar !== "\"null\"" && functionConfig.jar !== "\"\"" && functionConfig.jar.length > 0), "provide either 'py', 'jar'" +
-      " or 'go'");
+    assert((functionConfig.py !== undefined && functionConfig.py.length > 0)
+            || (functionConfig.go !== undefined && functionConfig.go.length > 0)
+            || (functionConfig.jar !== undefined && functionConfig.jar.length > 0), "provide either 'py', 'jar', or 'go'");
 
-    if((functionConfig.py !== undefined && functionConfig.py !== null && functionConfig.py !== "null")
-        || (functionConfig.jar !== undefined && functionConfig.jar !== null && functionConfig.jar !== "null") ) {
-      assert(functionConfig.className !== undefined && functionConfig.className !== null && functionConfig.className !== "\"\"" && functionConfig.className !== "null", "'className' is required");
+    if((functionConfig.py !== undefined && functionConfig.py.length > 0) || (functionConfig.jar !== undefined && functionConfig.jar.length > 0) ) {
+      assert(functionConfig.className !== undefined && functionConfig.className.length > 1, "'className' is required");
     }
 
     assert(functionConfig.inputs !== undefined && functionConfig.inputs !== null, "the 'inputs' collection is required");
     assert(functionConfig.inputs.length > 0, "'inputs' needs at least 1 topic");
-    assert(!functionConfig.inputs.includes("null") && !functionConfig.inputs.includes(""), "'inputs' has an invalid topic name");
+    assert(!functionConfig.inputs.includes("null") && !functionConfig.inputs.includes("\"\"") && !functionConfig.inputs.includes("\"null\""), "'inputs' has an invalid topic name");
   }
 
   public static matchInputs(functionConfig: FunctionConfig): FunctionConfig {

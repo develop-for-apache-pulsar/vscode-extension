@@ -7,6 +7,7 @@ import * as Constants from "../common/constants";
 import {TPulsarAdminProviderTenant} from "../types/tPulsarAdminProviderTenant";
 import {TSavedProviderConfig} from "../types/tSavedProviderConfig";
 import FunctionController from "../controllers/functionController";
+import * as YAML from "yaml";
 
 export default class DeployFunctionCodeLensProvider implements vscode.CodeLensProvider {
   private _onDidChangeCodeLenses: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
@@ -19,7 +20,7 @@ export default class DeployFunctionCodeLensProvider implements vscode.CodeLensPr
       new RegExp(/^.*?(\bnamespace\b:).*?$/im),
       new RegExp(/^.*?(\bname\b:).*?$/im),
       new RegExp(/^.*?(\bparallelism\b:).*?$/im),
-      new RegExp(/^.*?(\binputs\b|\binputSpecs\b:).*?$/im),
+      new RegExp(/^.*?(\binputs\b:).*?$/im),
     ];
 
     vscode.workspace.onDidChangeConfiguration((_) => {
@@ -39,6 +40,7 @@ export default class DeployFunctionCodeLensProvider implements vscode.CodeLensPr
       if(!regex.test(documentText)) {
         continue;
       }
+
       if(token.isCancellationRequested) {
         return [];
       }
@@ -76,19 +78,37 @@ export default class DeployFunctionCodeLensProvider implements vscode.CodeLensPr
     if (tenantNames === null || tenantNames.length !== 1) {
       vscode.window.showErrorMessage("Could not find tenant name either it's misspelled or appears more than once");
     }
-    const tenantName = tenantNames![0].replace("tenant:", "").trim();
+    const tenantName = tenantNames![0].replace("tenant:", "").trim()
+      .replace(/'null'/g, "")
+      .replace(/"null"/g, "")
+      .replace(/^\bnull\b$/i, "")
+      .replace(/"/g, "")
+      .replace(/'/g, "")
+      .replace(/`/g, "");
 
     const namespaceNames = new RegExp(/(namespace:).*/i).exec(documentText);
     if (namespaceNames === null || namespaceNames.length !== 1) {
       vscode.window.showErrorMessage("Could not find namespace either it's misspelled or appears more than once");
     }
-    const namespaceName = namespaceNames![0].replace("namespace:", "").trim();
+    const namespaceName = namespaceNames![0].replace("namespace:", "").trim()
+      .replace(/'null'/g, "")
+      .replace(/"null"/g, "")
+      .replace(/^\bnull\b$/i, "")
+      .replace(/"/g, "")
+      .replace(/'/g, "")
+      .replace(/`/g, "");
 
     const functionNames = new RegExp(/(name:).*/i).exec(documentText);
     if (functionNames === null || functionNames.length !== 1) {
       vscode.window.showErrorMessage("Could not find namespace either it's misspelled or appears more than once");
     }
-    const functionName = functionNames![0].replace("name:", "").trim();
+    const functionName = functionNames![0].replace("name:", "").trim()
+      .replace(/'null'/g, "")
+      .replace(/"null"/g, "")
+      .replace(/^\bnull\b$/i, "")
+      .replace(/"/g, "")
+      .replace(/'/g, "")
+      .replace(/`/g, "");
 
     // Get the configured clusters and try to find the function
     const clusterConfigs = ConfigurationProvider.getClusterConfigs();
@@ -143,42 +163,12 @@ export default class DeployFunctionCodeLensProvider implements vscode.CodeLensPr
       }
     }
 
-    const functionConfig: FunctionConfig = {};
-
-    documentText.split("\n").forEach((line) => {
-      if (line.startsWith("tenant:")) {
-        functionConfig.tenant = line.replace("tenant:", "").trim();
-      }
-
-      if (line.startsWith("namespace:")) {
-        functionConfig.namespace = line.replace("namespace:", "").trim();
-      }
-
-      if (line.startsWith("name:")) {
-        functionConfig.name = line.replace("name:", "").trim();
-      }
-
-      if (line.startsWith("parallelism:")) {
-        functionConfig.parallelism = parseInt(line.replace("parallelism:", "").trim());
-      }
-
-      if (line.startsWith("inputs:")) {
-        functionConfig.inputs = [];
-        functionConfig.inputs.push(line.replace("inputs:", "").trim());
-      }
-
-      if (line.startsWith("className:")) {
-        functionConfig.className = line.replace("className:", "").trim();
-      }
-
-      if (line.startsWith("py:")) {
-        functionConfig.py = line.replace("py:", "").trim();
-      }
-    });
+    const functionConfig: FunctionConfig = <FunctionConfig>YAML.parse(documentText);
+    const normalizedFunctionConfig = FunctionController.normalizeFunctionConfigValues(functionConfig);
 
     switch (codeLens.range.end.character) {
       case 0:
-        codeLens.command = this.buildFunctionDeployCommand(selectedConfig, selectedCluster, selectedTenant, pulsarAdmin, functionConfig);
+        codeLens.command = this.buildFunctionDeployCommand(selectedConfig, selectedCluster, selectedTenant, pulsarAdmin, normalizedFunctionConfig);
         break;
       case 1:
         codeLens.command = this.buildFunctionStatusCommand(functionStatus);
