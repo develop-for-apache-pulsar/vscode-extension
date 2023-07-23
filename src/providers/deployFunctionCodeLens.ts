@@ -1,13 +1,14 @@
 import * as vscode from 'vscode';
 import ConfigurationProvider from "./configurationProvider/configuration";
 import {TPulsarAdmin} from "../types/tPulsarAdmin";
-import {FunctionConfig, FunctionInstanceStatusData, FunctionStatus} from "@apache-pulsar/pulsar-admin/dist/gen/models";
+import {FunctionConfig, FunctionStatus} from "@apache-pulsar/pulsar-admin/dist/gen/models";
 import {TPulsarAdminProviderCluster} from "../types/tPulsarAdminProviderCluster";
 import * as Constants from "../common/constants";
 import {TPulsarAdminProviderTenant} from "../types/tPulsarAdminProviderTenant";
 import {TSavedProviderConfig} from "../types/tSavedProviderConfig";
-import FunctionController from "../controllers/functionController";
 import * as YAML from "yaml";
+import FunctionService from "../services/function/functionService";
+import Logger from "../utils/logger";
 
 export default class DeployFunctionCodeLensProvider implements vscode.CodeLensProvider {
   private _onDidChangeCodeLenses: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
@@ -74,9 +75,9 @@ export default class DeployFunctionCodeLensProvider implements vscode.CodeLensPr
 
     const documentText = document.getText();
 
-    const tenantNames = new RegExp(/(tenant:).*/i).exec(documentText);
+    const tenantNames = new RegExp(/^.*?(\btenant\b:).*?$/im).exec(documentText);
     if (tenantNames === null || tenantNames.length !== 1) {
-      vscode.window.showErrorMessage("Could not find tenant name either it's misspelled or appears more than once");
+      vscode.window.showErrorMessage("Could not find tenant name either it's misspelled or appears more than once in the document");
     }
     const tenantName = tenantNames![0].replace("tenant:", "").trim()
       .replace(/'null'/g, "")
@@ -86,9 +87,9 @@ export default class DeployFunctionCodeLensProvider implements vscode.CodeLensPr
       .replace(/'/g, "")
       .replace(/`/g, "");
 
-    const namespaceNames = new RegExp(/(namespace:).*/i).exec(documentText);
+    const namespaceNames = new RegExp(/^.*?(\bnamespace\b:).*?$/im).exec(documentText);
     if (namespaceNames === null || namespaceNames.length !== 1) {
-      vscode.window.showErrorMessage("Could not find namespace either it's misspelled or appears more than once");
+      vscode.window.showErrorMessage("Could not find namespace either it's misspelled or appears more than once in the document");
     }
     const namespaceName = namespaceNames![0].replace("namespace:", "").trim()
       .replace(/'null'/g, "")
@@ -98,9 +99,9 @@ export default class DeployFunctionCodeLensProvider implements vscode.CodeLensPr
       .replace(/'/g, "")
       .replace(/`/g, "");
 
-    const functionNames = new RegExp(/(name:).*/i).exec(documentText);
+    const functionNames = new RegExp(/^.*?(\bname\b:).*?$/im).exec(documentText);
     if (functionNames === null || functionNames.length !== 1) {
-      vscode.window.showErrorMessage("Could not find namespace either it's misspelled or appears more than once");
+      vscode.window.showErrorMessage("Could not find name either it's misspelled or appears more than once");
     }
     const functionName = functionNames![0].replace("name:", "").trim()
       .replace(/'null'/g, "")
@@ -113,11 +114,12 @@ export default class DeployFunctionCodeLensProvider implements vscode.CodeLensPr
     // Get the configured clusters and try to find the function
     const clusterConfigs = ConfigurationProvider.getClusterConfigs();
 
-    let selectedConfig: TSavedProviderConfig | undefined = undefined;
+    let selectedClusterConfig: TSavedProviderConfig | undefined = undefined;
     let selectedCluster: TPulsarAdminProviderCluster | undefined = undefined;
     let selectedTenant: TPulsarAdminProviderTenant | undefined = undefined;
     let pulsarAdmin: TPulsarAdmin | undefined = undefined;
     let functionStatus: FunctionStatus | undefined = undefined;
+    let selectedNamespace: string | undefined = undefined;
 
     for (const clusterConfig of clusterConfigs) {
       if (functionStatus !== undefined) { // already discovered function
@@ -134,8 +136,13 @@ export default class DeployFunctionCodeLensProvider implements vscode.CodeLensPr
           continue;
         }
 
+        selectedTenant = tenant;
+        selectedClusterConfig = clusterConfig;
+        selectedCluster = cluster;
+
         const providerClass = require(`../pulsarAdminProviders/${clusterConfig.providerTypeName}/provider`);
         pulsarAdmin = new providerClass.Provider(cluster.webServiceUrl, tenant.pulsarToken);
+        const functionService = new FunctionService(pulsarAdmin!);
 
         const namespaceNames = await pulsarAdmin?.ListNamespaceNames(tenantName);
         if (namespaceNames === undefined) { // move on there's no matching namespace
@@ -147,16 +154,12 @@ export default class DeployFunctionCodeLensProvider implements vscode.CodeLensPr
             continue;
           }
 
-          try{
-            functionStatus = <FunctionStatus | undefined>await pulsarAdmin!.FunctionStatus(tenantName, namespaceName, functionName);
-            if (functionStatus === undefined) { // move on there's no matching function
-              continue;
-            }
+          selectedNamespace = namespaceNm;
 
-            selectedCluster = cluster;
-            selectedTenant = tenant;
-            selectedConfig = clusterConfig;
+          try{
+            functionStatus = <FunctionStatus | undefined>await functionService.getStatus(tenantName, namespaceName, functionName);
           }catch (e) {
+            Logger.error(e);
             // no op
           }
         }
@@ -164,11 +167,17 @@ export default class DeployFunctionCodeLensProvider implements vscode.CodeLensPr
     }
 
     const functionConfig: FunctionConfig = <FunctionConfig>YAML.parse(documentText);
-    const normalizedFunctionConfig = FunctionController.normalizeFunctionConfigValues(functionConfig);
+    const normalizedFunctionConfig = FunctionService.normalizeFunctionConfigValues(functionConfig);
 
     switch (codeLens.range.end.character) {
       case 0:
-        codeLens.command = this.buildFunctionDeployCommand(selectedConfig, selectedCluster, selectedTenant, pulsarAdmin, normalizedFunctionConfig);
+        codeLens.command = this.buildFunctionDeployCommand((functionStatus !== undefined),
+          selectedClusterConfig,
+          selectedCluster,
+          selectedTenant,
+          selectedNamespace,
+          pulsarAdmin,
+          normalizedFunctionConfig);
         break;
       case 1:
         codeLens.command = this.buildFunctionStatusCommand(functionStatus);
@@ -180,50 +189,64 @@ export default class DeployFunctionCodeLensProvider implements vscode.CodeLensPr
   }
 
   private buildFunctionStatusCommand(functionStatus: FunctionStatus | undefined): vscode.Command {
-    let status = "";
-    let tooltip = "";
+    let status: string;
 
     if(functionStatus === undefined){
       status = "NEW";
     }else{
-      status = (functionStatus.numRunning !== undefined && functionStatus.numRunning > 0 ? "RUNNING" : "STOPPED");
+      status = ((functionStatus.numRunning ?? 0) > 0 ? "RUNNING" : "STOPPED");
     }
 
     return new class implements vscode.Command {
-      command: string = "";
-      title: string = `status: ${status}`;
-      tooltip: string = tooltip;
+      command = "";
+      title = `status: ${status}`;
+      tooltip = "";
     };
   }
 
-  private buildFunctionDeployCommand(selectedConfig: TSavedProviderConfig | undefined,
-                                    selectedCluster: TPulsarAdminProviderCluster | undefined,
-                                    selectedTenant: TPulsarAdminProviderTenant | undefined,
-                                    pulsarAdmin: TPulsarAdmin | undefined,
-                                    functionConfig: FunctionConfig): vscode.Command  {
+  private buildFunctionDeployCommand(functionExists: boolean,
+                                     selectedClusterConfig: TSavedProviderConfig | undefined,
+                                      selectedCluster: TPulsarAdminProviderCluster | undefined,
+                                      selectedTenant: TPulsarAdminProviderTenant | undefined,
+                                      selectedNamespaceName: string | undefined,
+                                      pulsarAdmin: TPulsarAdmin | undefined,
+                                      functionConfig: FunctionConfig): vscode.Command  {
     let validateError: string | undefined = undefined;
 
-    try{
-      FunctionController.validateFunctionConfig(functionConfig);
-    }catch (e:any) {
-      validateError = e.message;
+    if(selectedTenant === undefined){
+      validateError = `Could not find the tenant in your saved clusters`;
+    }else if(selectedNamespaceName === undefined){
+      validateError = "Could not find the namespace in your saved clusters";
+    }else if(selectedClusterConfig === undefined){
+      validateError = "No matching cluster config found in your saved clusters";
+    }else if(selectedCluster === undefined) {
+      validateError = "No matching cluster found in your saved clusters";
+    }else {
+      try{
+        FunctionService.validateFunctionConfig(functionConfig);
+      }catch (e:any) {
+        validateError = e.message;
+      }
     }
 
-    if(selectedCluster === undefined){
-      // The function location is unknown, therefore it's considered new
-      return {
-        tooltip: "Click to see a choice of clusters and start the new function",
-        command: (validateError !== undefined ? "" : Constants.COMMAND_DEPLOY_FUNCTION),
-        title: (validateError !== undefined ? validateError : "Deploy function"),
-        arguments: [functionConfig, ConfigurationProvider.getClusterConfigs()]
-      };
+    let tooltip = `Deploy the function in cluster '${selectedClusterConfig?.name}'.`;
+    let title = "Deploy function";
+
+    if(functionExists){
+      tooltip = `The existing function in cluster '${selectedClusterConfig?.name}' will be removed and new instances will be started`;
+      title = "Replace function";
+    }
+
+    if(validateError !== undefined){
+      tooltip = "";
+      title = validateError;
     }
 
     return {
-      tooltip: `The existing function in cluster '${selectedCluster.name}' will be removed and new instances will be started`,
-      command: (validateError !== undefined ? "" : Constants.COMMAND_UPDATE_FUNCTION),
-      title: (validateError !== undefined ? validateError : "Replace function"),
-      arguments: [selectedConfig, selectedCluster, selectedTenant, functionConfig, pulsarAdmin]
+      tooltip: tooltip,
+      command: (validateError !== undefined ? "" : Constants.COMMAND_DEPLOY_FUNCTION),
+      title: title,
+      arguments: [selectedClusterConfig, selectedCluster, selectedTenant, functionConfig, pulsarAdmin]
     };
   }
 
