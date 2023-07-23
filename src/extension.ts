@@ -22,16 +22,17 @@ import {TPulsarAdminProviderTenant} from "./types/tPulsarAdminProviderTenant";
 import {FunctionConfig, FunctionConfigRuntimeEnum, FunctionStatus} from "@apache-pulsar/pulsar-admin/dist/gen/models";
 import {TPulsarAdmin} from "./types/tPulsarAdmin";
 import FunctionPackageChooserCodeLensProvider from "./providers/functionPackageChooserCodeLens";
+import Logger from "./utils/logger";
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
-	console.log('Welcome to the Apache Pulsar admin extension. There are many wonderful things to see and click.');
+	Logger.info('Welcome to the Apache Pulsar admin extension. There are many wonderful things to see and click.');
 
-	console.log('Building provider registry');
+	Logger.info('Building provider registry');
 	const providerRegistry = new PulsarAdminProviders();
 
-	console.log('Building tree provider');
+	Logger.info('Building tree provider');
 	const pulsarClusterTreeProvider = new PulsarClusterTreeDataProvider(providerRegistry, context);
 
 	const functionCodeLensSelector: vscode.DocumentSelector = [
@@ -42,7 +43,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 	const deployFunctionCodeLensProvider = new DeployFunctionCodeLensProvider();
 	const functionPackageChooserCodeLensProvider = new FunctionPackageChooserCodeLensProvider();
 
-	console.log('Building subscriptions');
+	Logger.info('Building subscriptions');
 	const subscriptions = [
 		vscode.window.registerTreeDataProvider(Constants.PROVIDER_CLUSTER_TREE, pulsarClusterTreeProvider),
 		registerReadonlyEditorProvider(Constants.TOPIC_MESSAGE_CUSTOM_EDITOR_VIEW_TYPE, TopicMessageController.createTopicMessageEditorProvider(context)),
@@ -95,7 +96,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 		//Telemetry.initialize(),
 	];
 
-	console.log('Registering commands');
+	Logger.info('Registering commands');
 	subscriptions.forEach((element) => {
 		context.subscriptions.push(element);
 	});
