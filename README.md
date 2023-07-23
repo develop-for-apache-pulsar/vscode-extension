@@ -22,14 +22,16 @@ This extension provides support for [Apache Pulsar](https://pulsar.apache.org/) 
   - Start, stop, restart, delete function
   - Start, stop function instances
   - Delete function
-  - Create new function
-    - Auto sense a function manifest and show deploy shortcuts
-    - Auto sense a function manifest and show runtime package options
+  - Create new function**
+  - Auto sense a function manifest and show deploy shortcuts**
+  - Auto sense a function manifest and show runtime package options
 
-      ```
-      py: choose .py file or choose a folder to (automatically) zip
-      java: choose .jar or .nar file
-      go: choose go executable
-      ```
+     ```
+     py: choose .py file or choose a folder to (automatically) zip
+     java: choose .jar or .nar file
+     go: choose go executable
+     ```
+
+** This feature is not compatible with Pulsar 3.0
 
 Once installed you'll notice a new Pulsar icon in the activity bar. Click it to activate the extension and see the option to save your providers' configuration.
