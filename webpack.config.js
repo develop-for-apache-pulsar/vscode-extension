@@ -3,7 +3,6 @@
 'use strict';
 
 const path = require('path');
-const terserPlugin = require("terser-webpack-plugin");
 
 /** @typedef {import('webpack').Configuration} WebpackConfig **/
 
@@ -47,19 +46,5 @@ const extensionConfig = {
     level: "log", // enables logging required for problem matchers
   },
 };
-
-if(process.env.NODE_ENV === "production"){
-  extensionConfig.optimization = {
-    minimize: true,
-      minimizer: [new terserPlugin({
-      extractComments: false,
-      terserOptions: {
-        compress: {
-          pure_funcs: ['console.debug', 'console.info', 'console.log', 'console.warn']
-        },
-      },
-    })],
-  };
-}
 
 module.exports = [ extensionConfig ];

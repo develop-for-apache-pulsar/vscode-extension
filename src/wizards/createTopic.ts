@@ -199,7 +199,6 @@ export class CreateTopicWizard extends Wizard {
         this.successCallback(topicType, numPartitions, topicName, topicProperties);
       }
     } catch (err: any) {
-      console.log(err);
       this.postError(MessageError.couldNotCreate, err);
       return;
     }
