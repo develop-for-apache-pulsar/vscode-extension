@@ -6,6 +6,7 @@ import {ErrorEvent, MessageEvent, WebSocket} from "ws";
 import {TTopicMessage} from "../../types/tTopicMessage";
 import TopicMessage from "./topicMessage";
 import {ClientRequestArgs} from "http";
+import Logger from "../../utils/logger";
 
 export class TopicMessageEditorProvider implements vscode.CustomReadonlyEditorProvider<TopicMessagesDocument> {
   constructor(private readonly context: vscode.ExtensionContext) {}
@@ -26,10 +27,10 @@ export class TopicMessageEditorProvider implements vscode.CustomReadonlyEditorPr
 
     webviewPanel.onDidDispose(async () => {
       try{
-        console.log("Close topic " + topicMessagesDocument.content.topicName);
+        Logger.info("Close topic " + topicMessagesDocument.content.topicName);
         websocket?.close();
       }catch(e){
-        console.log(e);
+        Logger.error(e);
       }
     });
 

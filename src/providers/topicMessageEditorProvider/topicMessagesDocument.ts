@@ -2,11 +2,12 @@ import * as vscode from "vscode";
 import * as fs from "fs";
 import ErrnoException = NodeJS.ErrnoException;
 import TopicMessageDocumentContent from "./topicMessageDocumentContent";
+import Logger from "../../utils/logger";
 
 export default class TopicMessagesDocument implements vscode.CustomDocument {
   public static async create(uri: vscode.Uri, backupId: string | undefined): Promise<TopicMessagesDocument> {
     // If we have a backup, read that.
-    console.log(typeof backupId === 'string' ? `Creating document from backup` : `Creating new document`);
+    Logger.info(typeof backupId === 'string' ? `Creating document from backup` : `Creating new document`);
     const dataFile = typeof backupId === 'string' ? vscode.Uri.parse(backupId) : uri;
 
     return TopicMessagesDocument.readFile(dataFile);
@@ -16,8 +17,6 @@ export default class TopicMessagesDocument implements vscode.CustomDocument {
 
     // Opening a new document. Parse the info from the uri and build a new document.
     if (uri.scheme === 'untitled') {
-      console.log("Using untitled scheme");
-
       let uriParts = null;
 
       if (process.platform === 'win32') {
@@ -50,7 +49,7 @@ export default class TopicMessagesDocument implements vscode.CustomDocument {
     }
 
     // Otherwise parse the existing file's contents.
-    console.log("Using existing file");
+    Logger.info("Using existing file");
     let fileContents: TopicMessageDocumentContent | undefined = undefined;
     try {
       fs.readFile(uri.fsPath, "utf8", async (err: ErrnoException | null, data: string) => {
@@ -58,7 +57,7 @@ export default class TopicMessagesDocument implements vscode.CustomDocument {
           throw new Error(`An error occurred trying to read the pulsar file - ${err?.message}`);
         }
 
-        console.log("File contents: %o", data);
+        Logger.info("File contents: %o", data);
 
         try {
           fileContents = await TopicMessageDocumentContent.fromJson(data);
@@ -67,7 +66,7 @@ export default class TopicMessagesDocument implements vscode.CustomDocument {
         }
       });
     } catch(e) {
-      console.log(e);
+      Logger.info(e);
       throw e;
     }
 
@@ -85,14 +84,13 @@ export default class TopicMessagesDocument implements vscode.CustomDocument {
   }
 
   public dispose(): void {
-    console.log("Disposing document");
   }
 
   /**
    * Called by VS Code when the user saves the document.
    */
   public async save(cancellation: vscode.CancellationToken): Promise<void> {
-    console.log("Saving document");
+    Logger.info("Saving document");
     await this.saveAs(this.uri, cancellation);
   }
 
@@ -100,12 +98,12 @@ export default class TopicMessagesDocument implements vscode.CustomDocument {
    * Called by VS Code when the user saves the document to a new location.
    */
   public async saveAs(targetResource: vscode.Uri, cancellation: vscode.CancellationToken): Promise<void> {
-    console.log("Saving file contents as: %o", targetResource);
-    console.log("File contents: %o", this.content.toJson());
+    Logger.info("Saving file contents as: %o", targetResource);
+    Logger.info("File contents: %o", this.content.toJson());
 
     await fs.writeFile(targetResource.fsPath, this.content.toJson(), (err: ErrnoException | null) => {
       if (err) {
-        console.log(err);
+        Logger.info(err);
         throw new Error(`An error occurred trying to save the pulsar file - ${err.message}`); //let vscode handle the error
       }
     });
@@ -117,7 +115,7 @@ export default class TopicMessagesDocument implements vscode.CustomDocument {
    * These backups are used to implement hot exit.
    */
   public async backup(destination: vscode.Uri, cancellation: vscode.CancellationToken): Promise<vscode.CustomDocumentBackup> {
-    console.log("Backing up document");
+    Logger.info("Backing up document");
     await this.saveAs(destination, cancellation);
 
     return {

@@ -1,6 +1,7 @@
 import {TPulsarAdmin} from "../../types/tPulsarAdmin";
 import {Provider} from "./provider";
 import {TProviderSettings} from "../../types/tProviderSettings";
+import Logger from "../../utils/logger";
 
 export class Settings implements TProviderSettings {
   public typeName = 'private-service';
@@ -182,7 +183,7 @@ export class Settings implements TProviderSettings {
           clustersAndTenants.push([clusterName,tenantNames]);
         }
       } catch (err: any) {
-        console.log(err);
+        Logger.error(err);
         this.wizard.postMessage(SaveProviderMessageError.pulsarAdminError, err.message);
       }
 

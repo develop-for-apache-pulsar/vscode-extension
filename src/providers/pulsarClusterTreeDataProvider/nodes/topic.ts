@@ -6,6 +6,7 @@ import * as path from "path";
 import {CONTEXT_VALUES, ExplorerMessageTypes} from "../../../common/constants";
 import {TAllPulsarAdminExplorerNodeTypes} from "../../../types/tAllPulsarAdminExplorerNodeTypes";
 import {GetSchemaResponse} from "@apache-pulsar/pulsar-admin/dist/gen/models";
+import Logger from "../../../utils/logger";
 
 export interface ITopicNode extends vscode.TreeItem {
   readonly pulsarAdmin: TPulsarAdmin;
@@ -52,7 +53,7 @@ export class TopicTree {
         try{
           schema = await this.pulsarAdmin.GetTopicSchema(tenantName, namespaceName, topic.name);
         }catch(e:any){
-          console.log(e);
+          Logger.error(e);
         }
 
         topicNodes.push(new TopicNode(this.pulsarAdmin, topic.name, topic.type, providerTypeName, clusterName, tenantName, namespaceName, schema));
