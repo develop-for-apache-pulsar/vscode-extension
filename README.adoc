@@ -25,6 +25,15 @@ This extension provides support for https://pulsar.apache.org/[Apache Pulsar^] i
 - Start, stop, restart, delete function
 - Start, stop function instances
 - Delete function
+- Create new function
+- Auto sense a function manifest and show deploy shortcuts
+- Auto sense a function manifest and show runtime package options
++
+----
+py: choose .py file or choose a folder to (automatically) zip
+java: choose .jar or .nar file
+go: choose go executable
+----
 
 == Getting Started
 
@@ -60,10 +69,69 @@ If you work with a managed provider of Apache Pulsar, let's create a provider fo
 
 Not all providers are created the same. Some use tokens some don't. Some managed version of Pulsar don't support all the features of an OSS cluster. This extension tries to be as flexible as possible to support all the different providers, while still giving the consumer a consistent experience.
 
-== Contributing
+== Output for debugging
 
-All contributors are welcome! It helps if you are familiar with Typescript (that's what the extension is written in), but it's not required. If you are interested in contributing, please reach out to us.
+While using the extension you may want to see output of what is going on in the background. To do this, open the VSCode output panel and select the 'Develop for Apache Pulsar' output channel. This will show you the logs from the extension.
 
 == Roadmap of your ideas
 
 We've got high hopes for this extension. If you have an idea of a feature that would make it even better, please open an issue and let's discuss it! You can review the current roadmap in https://github.com/orgs/develop-for-apache-pulsar/projects/1[the GitHub project].
+
+== Contributing
+
+All contributors are welcome! It helps if you are familiar with Typescript (that's what the extension is written in), but it's not required. If you are interested in contributing, please reach out to us.
+
+=== Project Structure
+
+Let's use the folder structure of the project to explain how things are laid out.
+
+==== images
+
+This is a folder for images used in the README and other documentation. All features that include icons and images should respect the chosen theme. If you are adding a new feature, please add a light and dark version of the image. No matter where the image in used in code, it should be referenced from this folder. VSCode is picky about svg's sometimes, so if you are having trouble with an image, try converting it to a png.
+
+==== scripts
+
+This is a folder for javascript used in webpanels. A webpanel is just a mini browser serving up html, with support for javascript actions. VSCode provides workers to do messaging between the browser and the background process. No matter where the javascript is used, it should be references from this folder.
+
+==== src
+
+**common** - holds .ts classes that are commonly used throughout the project. Currently, it's just the constants.
+
+**controllers** - think of this in the same way a microservice's folders are laid out. The public facing functions (endpoints) are the controllers. The endpoints declared in a controller have no logic. They just marshall request/response actions. Like cancellation tokens, global libs, and translating exceptions to response statuses.
+
+In this project, a controller is allowed to reference the (global) vscode lib but all lower classes that the controller depends on can not import vscode. If something is needed (like a context value), the contoller needs to handle getting that info to the dependent lib.
+
+The execution of a controller almost always traces back to a declared VSCode command.
+
+TODO: Controllers are fire and forget
+
+**providers** - these are extensions of VSCode objects. Typically, when an extension wants to implement a given feature of VSCode (like a folder tree or a document editor) it uses the provided interface from the vscode lib. Each folder in this folder represent an implementation of the given object.
+
+**pulsarAdminProviders** - this is specific to this extension. The idea is to make adding providers as easy and clear as possible. Each provider is a folder within this folder. There are 2 required files in a given provider's folder. +
+
+- provider.ts: this is the provider's implementation of pulsar admin. Typically it's going to take a signature of:
++
+[source, typescript]
+====
+export class Provider extends BaseProvider implements TPulsarAdmin {}
+====
+
+- settings.ts: this is the provider's declaration of its service (icon, display name, etc). Nested in this class is the provider's onboarding implementation. That is how one discovers their pulsar clusters hosted with the provider and saves a reference in this extension.
+
+There is also a 'base' provider. Most providers will extend the base and override functions when needed.
+
+**services** - these are classes that are used throughout the project. They hold the logic of how the given function is completed while interacting with a Pulsar cluster. They are not dependent on vscode so testing should be quite easy.
+
+**test** - this is where... you guess it, tests are located. Testing VSCode extensions are notoriously hard. But the founder of this project is a big believer in test driven development, so a compromise had to be met. The 'integration' folder holds tests that use the recommended electron approach. Attempting to run VSCode in memory and test an extension's features. The 'unit' folder holds smaller bite size tests that don't need VSCode. Remember the design of controllers and providers? Their dependent classes don't import vscode which makes them very testable.
+
+**types** - all declared typescript types in this project live here. For the most part, interfaces are not used. Instead, they are a 'type'.
+
+**utils** - simple utility classes used throughout the project.
+
+**wizards** - certain actions (like creating a topic or discovering new clusters) have multiple steps for completion. These wizards are used throughout the project.
+
+**extension.ts** - VSCode's activation of the extension and all it's features.
+
+==== styles
+
+A complement to the scripts folder, holding styles used in webpanels. Same rules apply.

@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0]
+
+### Added
+
+- Progress runner for long-running actions
+- Zip utility for packaging functions
+- Code lens for yaml function manifests
+- Document helper to open json & yaml files
+- Output logger
+
+### Changed
+
+- Folder structure to be more like a microservice controller/service style
+- Function management to use the new task runner
+- Function management to use the new zip utility
+- Function management to use the new code lens
+- Topics to use the new document helper
+- Function to use the new document helper
+- All debugging outputs to use the new output logger
+
+Contributors: ddieruf
+
 ## [0.4.0]
 
 ### Fixed
