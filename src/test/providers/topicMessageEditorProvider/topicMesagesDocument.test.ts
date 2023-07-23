@@ -1,5 +1,5 @@
 import {assert, expect} from "chai";
-import TopicMessageDocumentContent from "../../../../providers/topicMessageEditorProvider/topicMessageDocumentContent";
+import TopicMessageDocumentContent from "../../../providers/topicMessageEditorProvider/topicMessageDocumentContent";
 
 describe("Topic message document content tests", () => {
   it("should construct new document content", async () => {

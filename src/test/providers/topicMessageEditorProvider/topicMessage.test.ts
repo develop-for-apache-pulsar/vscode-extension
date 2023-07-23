@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import TopicMessage from "../../../../providers/topicMessageEditorProvider/topicMessage";
+import TopicMessage from "../../../providers/topicMessageEditorProvider/topicMessage";
 import {GetSchemaResponse, GetSchemaResponseTypeEnum} from "@apache-pulsar/pulsar-admin/dist/gen/models";
 import {MessageEvent, WebSocket, Server} from "ws";
 
