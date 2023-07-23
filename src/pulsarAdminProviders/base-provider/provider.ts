@@ -3,7 +3,6 @@
 import { TPulsarAdmin } from "../../types/tPulsarAdmin";
 import PulsarAdmin from "@apache-pulsar/pulsar-admin";
 import {ClusterData} from "@apache-pulsar/pulsar-admin/dist/gen/models/cluster-data";
-import {trace} from "../../utils/traceDecorator";
 import {
   FunctionConfig,
   FunctionInstanceStatsDataImpl,
@@ -13,11 +12,10 @@ import {
   GetSchemaResponse,
   PartitionedTopicMetadata
 } from "@apache-pulsar/pulsar-admin/dist/gen/models";
-import axios, {Axios, AxiosRequestConfig, AxiosResponse} from "axios";
+import axios, {Axios, AxiosError, AxiosRequestConfig, AxiosResponse} from "axios";
 import {TopicStats} from "./topicStats";
 import * as path from "path";
 import * as fs from "fs";
-import {Blob} from "buffer";
 
 export class BaseProvider implements TPulsarAdmin {
   protected readonly client: PulsarAdmin;
@@ -39,7 +37,7 @@ export class BaseProvider implements TPulsarAdmin {
     }
   }
 
-  protected async QueryPulsarAdminClient<T>(fn: Promise<any>, def: T): Promise<T> {
+  protected async QueryPulsarAdminClient<T>(fn: Promise<any>, def: T, errorOnNotFound: boolean = true): Promise<T> {
     return new Promise((resolve, reject) => {
       fn.then((response: any) => {
         if (response.status > 199 && response.status < 300) {
@@ -49,47 +47,54 @@ export class BaseProvider implements TPulsarAdmin {
 
         reject(response);
       }).catch((err: any) => {
-        if(this.shouldRejectError(err)) {
-          //console.log("Request rejected");
+        if(true === this.shouldRejectError(err, errorOnNotFound)) {
           reject(err);
           return;
         }
 
-        //console.log("Request not rejected, returning default value");
         resolve(def);
       });
     });
   }
 
-  private shouldRejectError(err: any): boolean {
-    return !(err.code === 'ERR_BAD_RESPONSE'
-        && err.response.status === 500
-        && err.response.data.message === 'Request failed.'
-        && (err.response.data.servlet.indexOf('org.glassfish.jersey.servlet.ServletContainer') > -1)
-        && err.response.data.status === '500');
+  private shouldRejectError(err: any, errorOnNotFound: boolean): boolean {
+    if (false === err instanceof AxiosError) {
+      return true;
+    }
+
+    const isGlassfishError = (err.code === 'ERR_BAD_RESPONSE'
+                                && err.response.status === 500
+                                && err.response.data.message === 'Request failed.'
+                                && (err.response.data.servlet.indexOf('org.glassfish.jersey.servlet.ServletContainer') > -1)
+                                && err.response.data.status === '500');
+
+    const isNotFoundError = (err.code === 'ERR_BAD_REQUEST'
+                              && err.response?.status === 404
+                              && err.response?.statusText?.toLowerCase().indexOf('not found') > -1);
+
+    if(isGlassfishError) {
+      return false;
+    }
+
+    return isNotFoundError && errorOnNotFound;
   }
 
-  @trace('Base: Get broker version')
   public async GetBrokerVersion(): Promise<string> {
     return this.QueryPulsarAdminClient<string>(this.client.brokers().version(), "");
   }
 
-  @trace('Base: List cluster names')
   public async ListClusterNames(): Promise<string[]> {
     return this.QueryPulsarAdminClient<string[]>(this.client.clusters().get(), []);
   }
 
-  @trace('Base: Get cluster details')
   public async GetClusterDetails(clusterName: string): Promise<ClusterData | undefined> {
     return this.QueryPulsarAdminClient<ClusterData | undefined>(this.client.clusters().get_1(clusterName), undefined);
   }
 
-  @trace('Base: List tenant names')
   public async ListTenantNames(): Promise<string[]> {
     return this.QueryPulsarAdminClient<string[]>(this.client.tenants().get(), []);
   }
 
-  @trace('Base: List namespace names')
   public async ListNamespaceNames(tenantName: string): Promise<string[]> {
     return new Promise<string[]>((resolve, reject) => {
       this.QueryPulsarAdminClient<string[]>(this.client.namespaces().getTenant(tenantName), []).then((namespaces: string[]) => {
@@ -100,7 +105,6 @@ export class BaseProvider implements TPulsarAdmin {
     });
   }
 
-  @trace('Base: List topics')
   public async ListTopicNames(tenantName: string, namespaceName: string): Promise<{type:string, name:string}[]> {
     const persistentTopics: string[] = await this.QueryPulsarAdminClient<string[]>(this.client.persistentTopic().getList(tenantName, namespaceName), []);
     const nonPersistentTopics: string[] = await this.QueryPulsarAdminClient<string[]>(this.client.nonPersistentTopic().getList(tenantName, namespaceName), []);
@@ -122,25 +126,21 @@ export class BaseProvider implements TPulsarAdmin {
     return new URL(topicAddress).pathname.split("/")[2];
   }
 
-  @trace('Base: List connector sink names')
   public async ListConnectorSinkNames(tenantName: string, namespaceName: string): Promise<string[]> {
     return this.QueryPulsarAdminClient<string[]>(this.client.sinks().list(tenantName, namespaceName), []);
   }
 
-  @trace('Base: List connector source names')
   public async ListConnectorSourceNames(tenantName: string, namespaceName: string): Promise<string[]> {
     return this.QueryPulsarAdminClient<string[]>(this.client.sources().list(tenantName, namespaceName), []);
   }
 
-  @trace('Base: List function names')
   public async ListFunctionNames(tenantName: string, namespaceName: string): Promise<string[]> {
     return this.QueryPulsarAdminClient<string[]>(this.client.functions().list(tenantName, namespaceName), []);
   }
 
-  @trace('Base: Get topic schema')
   async GetTopicSchema(tenantName: string, namespaceName: string, topicName: string): Promise<GetSchemaResponse | undefined> {
     return new Promise<GetSchemaResponse | undefined>((resolve, reject) => {
-      this.QueryPulsarAdminClient<GetSchemaResponse | undefined>(this.client.schemas().get(tenantName, namespaceName, topicName), undefined)
+      this.QueryPulsarAdminClient<GetSchemaResponse | undefined>(this.client.schemas().get(tenantName, namespaceName, topicName), undefined, false)
         .then((schema: GetSchemaResponse | undefined) => {
           resolve(schema);
         })
@@ -155,7 +155,6 @@ export class BaseProvider implements TPulsarAdmin {
     });
   }
 
-  @trace('Base: Create persistent topic')
   public async CreatePersistentTopic(tenantName: string, namespaceName: string, topicName: string, numPartitions: number = 0, metadata: {[p: string]: string} | undefined = undefined): Promise<undefined> {
     if(numPartitions < 1) {
       return this.QueryPulsarAdminClient<undefined>(this.client.persistentTopic().createNonPartitionedTopic(tenantName, namespaceName, topicName, undefined, metadata), undefined);
@@ -164,7 +163,6 @@ export class BaseProvider implements TPulsarAdmin {
     return this.QueryPulsarAdminClient<undefined>(this.client.persistentTopic().createPartitionedTopic(tenantName, namespaceName, topicName, numPartitions), undefined);
   }
 
-  @trace('Base: Create non-persistent topic')
   public async CreateNonPersistentTopic(tenantName: string, namespaceName: string, topicName: string, numPartitions: number = 0, metadata: {[p: string]: string} | undefined = undefined): Promise<undefined> {
     if(numPartitions < 1) {
       return this.QueryPulsarAdminClient<undefined>(this.client.nonPersistentTopic().createNonPartitionedTopic(tenantName, namespaceName, topicName, undefined, metadata), undefined);
@@ -178,7 +176,6 @@ export class BaseProvider implements TPulsarAdmin {
     return this.QueryPulsarAdminClient<undefined>(this.client.nonPersistentTopic().createPartitionedTopic(tenantName, namespaceName, topicName, partitionedTopicMetadata), undefined);
   }
 
-  @trace('Base: Start function')
   public async StartFunction(tenantName: string, namespaceName: string, functionName: string, instanceId?: number | undefined): Promise<void | undefined> {
     const options: AxiosRequestConfig = {
       headers: {
@@ -198,7 +195,6 @@ export class BaseProvider implements TPulsarAdmin {
     return this.QueryPulsarAdminClient<void | undefined>(this.client.functions().start(tenantName, namespaceName, functionName, options), undefined);
   }
 
-  @trace('Base: Stop function')
   public async StopFunction(tenantName: string, namespaceName: string, functionName: string, instanceId?: number | undefined): Promise<void | undefined> {
     const options: AxiosRequestConfig = {
       headers: {
@@ -218,7 +214,6 @@ export class BaseProvider implements TPulsarAdmin {
     return this.QueryPulsarAdminClient<void | undefined>(this.client.functions().stop(tenantName, namespaceName, functionName, options), undefined);
   }
 
-  @trace('Base: Restart function')
   public async RestartFunction(tenantName: string, namespaceName: string, functionName: string, instanceId?: number | undefined): Promise<void | undefined> {
     const options: AxiosRequestConfig = {
       headers: {
@@ -238,7 +233,6 @@ export class BaseProvider implements TPulsarAdmin {
     return this.QueryPulsarAdminClient<void | undefined>(this.client.functions().restart(tenantName, namespaceName, functionName, options), undefined);
   }
 
-  @trace('Base: Function stats')
   public async FunctionStats(tenantName: string, namespaceName: string, functionName: string, instanceId?: number | undefined): Promise<FunctionStatsImpl | FunctionInstanceStatsDataImpl | undefined> {
     if(instanceId) {
       return this.QueryPulsarAdminClient<FunctionInstanceStatsDataImpl | undefined>(this.client.functions().getInstanceStats(tenantName, namespaceName, functionName, instanceId.toString()), undefined);
@@ -247,26 +241,22 @@ export class BaseProvider implements TPulsarAdmin {
     return this.QueryPulsarAdminClient<FunctionStatsImpl | undefined>(this.client.functions().getStats(tenantName, namespaceName, functionName), undefined);
   }
 
-  @trace('Base: Function status')
   public async FunctionStatus(tenantName: string, namespaceName: string, functionName: string, instanceId?: number | undefined): Promise<FunctionStatus | FunctionInstanceStatusData | undefined> {
     if(instanceId) {
       return this.QueryPulsarAdminClient<FunctionInstanceStatusData | undefined>(this.client.functions().getInstanceStatus(tenantName, namespaceName, functionName, instanceId.toString()), undefined);
     }
 
-    return this.QueryPulsarAdminClient<FunctionStatus | undefined>(this.client.functions().getStatus(tenantName, namespaceName, functionName), undefined);
+    return this.QueryPulsarAdminClient<FunctionStatus | undefined>(this.client.functions().getStatus(tenantName, namespaceName, functionName), undefined, false);
   }
 
-  @trace('Base: Function info')
   public async GetFunctionInfo(tenantName: string, namespaceName: string, functionName: string): Promise<FunctionConfig | undefined> {
     return this.QueryPulsarAdminClient<FunctionConfig | undefined>(this.client.functions().getInfo(tenantName, namespaceName, functionName), undefined);
   }
 
-  @trace('Base: Delete function')
   public async DeleteFunction(tenantName: string, namespaceName: string, functionName: string): Promise<void | undefined> {
-    return this.QueryPulsarAdminClient<void | undefined>(this.client.functions().deregister(tenantName, namespaceName, functionName), undefined);
+    return this.QueryPulsarAdminClient<void | undefined>(this.client.functions().deregister(tenantName, namespaceName, functionName), undefined, false);
   }
 
-  @trace('Base: Topic exists')
   public async TopicExists(topicType: string, tenantName: string, namespaceName: string, topicName: string): Promise<boolean> {
     return new Promise<boolean>(async (resolve, reject) => {
       const options: AxiosRequestConfig = {
@@ -293,7 +283,6 @@ export class BaseProvider implements TPulsarAdmin {
     });
   }
 
-  @trace('Base: Topic stats')
   public async TopicStats(topicType:string, tenantName: string, namespaceName: string, topicName: string): Promise<TopicStats | undefined> {
     if(topicType === 'persistent') {
       return this.QueryPulsarAdminClient<TopicStats | undefined>(this.client.persistentTopic().getStats(tenantName, namespaceName, topicName), undefined);
@@ -302,7 +291,6 @@ export class BaseProvider implements TPulsarAdmin {
     return this.QueryPulsarAdminClient<TopicStats | undefined>(this.client.nonPersistentTopic().getStats(tenantName, namespaceName, topicName), undefined);
   }
 
-  @trace('Base: Topic properties')
   public async TopicProperties(topicType:string, tenantName: string, namespaceName: string, topicName: string): Promise<[{ [key: string]: string; }] | undefined> {
     if(topicType === 'persistent') {
       return this.QueryPulsarAdminClient<[{ [key: string]: string; }]| undefined>(this.client.persistentTopic().getProperties(tenantName, namespaceName, topicName), undefined);
@@ -311,7 +299,6 @@ export class BaseProvider implements TPulsarAdmin {
     return this.QueryPulsarAdminClient<[{ [key: string]: string; }] | undefined>(this.client.nonPersistentTopic().getProperties(tenantName, namespaceName, topicName), undefined);
   }
 
-  @trace('Base: Topic delete')
   public async DeleteTopic(topicType:string, tenantName: string, namespaceName: string, topicName: string): Promise<void> {
     if(topicType === 'persistent') {
       return this.QueryPulsarAdminClient<void>(this.client.persistentTopic().deleteTopic(tenantName, namespaceName, topicName), undefined);
@@ -320,7 +307,6 @@ export class BaseProvider implements TPulsarAdmin {
     return this.QueryPulsarAdminClient<void>(this.client.nonPersistentTopic().deleteTopic(tenantName, namespaceName, topicName), undefined);
   }
 
-  @trace('Base: Create function')
   public async CreateFunction(functionConfig: FunctionConfig, filePath: fs.PathLike): Promise<void> {
     const options: AxiosRequestConfig = {
       headers: {

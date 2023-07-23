@@ -19,7 +19,7 @@ import DeployFunctionCodeLensProvider from "./providers/deployFunctionCodeLens";
 import {TSavedProviderConfig} from "./types/tSavedProviderConfig";
 import {TPulsarAdminProviderCluster} from "./types/tPulsarAdminProviderCluster";
 import {TPulsarAdminProviderTenant} from "./types/tPulsarAdminProviderTenant";
-import {FunctionConfig, FunctionConfigRuntimeEnum, FunctionStatus} from "@apache-pulsar/pulsar-admin/dist/gen/models";
+import {FunctionConfig, FunctionConfigRuntimeEnum} from "@apache-pulsar/pulsar-admin/dist/gen/models";
 import {TPulsarAdmin} from "./types/tPulsarAdmin";
 import FunctionPackageChooserCodeLensProvider from "./providers/functionPackageChooserCodeLens";
 import Logger from "./utils/logger";
@@ -73,9 +73,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 		registerCommand(Constants.COMMAND_FUNCTION_INFO, (explorerNode: FunctionNode) => FunctionController.showFunctionInfo(explorerNode)),
 		registerCommand(Constants.COMMAND_FUNCTION_DELETE, (explorerNode: FunctionNode) => FunctionController.deleteFunction(explorerNode, pulsarClusterTreeProvider)),
 		registerCommand(Constants.COMMAND_FUNCTION_WATCH_TOPICS, (explorerNode: FunctionNode) => FunctionController.watchFunctionTopics(explorerNode)),
-		registerCommand(Constants.COMMAND_DEPLOY_FUNCTION, (functionConfig: FunctionConfig,
-																																clusterConfigs: TSavedProviderConfig[]) => FunctionController.deployFunction(pulsarClusterTreeProvider, context, functionConfig, clusterConfigs)),
-		registerCommand(Constants.COMMAND_UPDATE_FUNCTION, (selectedConfig: TSavedProviderConfig,
+		registerCommand(Constants.COMMAND_DEPLOY_FUNCTION, (selectedConfig: TSavedProviderConfig,
 																																selectedCluster: TPulsarAdminProviderCluster,
 																																selectedTenant: TPulsarAdminProviderTenant,
 																																functionConfig: FunctionConfig,

@@ -30,7 +30,6 @@ export const COMMAND_FUNCTION_INFO = 'extension.vsDevelopPulsarFunctionInfo';
 export const COMMAND_FUNCTION_DELETE = 'extension.vsDevelopPulsarFunctionDelete';
 export const COMMAND_FUNCTION_WATCH_TOPICS = 'extension.vsDevelopPulsarWatchFunctionTopics';
 export const COMMAND_DEPLOY_FUNCTION = 'extension.vsDevelopPulsarDeployFunction';
-export const COMMAND_UPDATE_FUNCTION = 'extension.vsDevelopPulsarUpdateFunction';
 export const COMMAND_STOP_FUNCTION_INSTANCE = 'extension.vsDevelopPulsarStopFunctionInstance';
 export const COMMAND_RESTART_FUNCTION_INSTANCE = 'extension.vsDevelopPulsarRestartFunctionInstance';
 export const COMMAND_START_FUNCTION_INSTANCE = 'extension.vsDevelopPulsarStartFunctionInstance';
