@@ -5,9 +5,9 @@ import {CreateTopicWizard} from "../wizards/createTopic";
 import {PulsarClusterTreeDataProvider} from "../providers/pulsarClusterTreeDataProvider/explorer";
 import {TreeExplorerController} from "./treeExplorerController";
 import {TopicNode} from "../providers/pulsarClusterTreeDataProvider/nodes/topic";
-import * as YAML from "yaml";
-import TextDocumentHelper from "../utils/textDocumentHelper";
-import {FunctionNode} from "../providers/pulsarClusterTreeDataProvider/nodes/function";
+import DocumentHelper from "../utils/documentHelper";
+import * as path from "path";
+import Logger from "../utils/logger";
 
 export default class TopicController {
   @trace('Show Add Cluster Config Wizard')
@@ -95,11 +95,13 @@ export default class TopicController {
         return;
       }
 
-      const documentContent = YAML.stringify(stats, null, 2);
-      await TextDocumentHelper.openDocument(documentContent, 'yaml');
+      DocumentHelper.openDocument(stats, 'yaml').then(
+        doc => DocumentHelper.showDocument(doc, true),
+        vscode.window.showErrorMessage
+      );
     }).catch((e) => {
       vscode.window.showErrorMessage(`Error occurred getting topic statistics: ${e}`);
-      console.log(e);
+      Logger.error(e);
     });
   }
 
@@ -110,11 +112,13 @@ export default class TopicController {
         return;
       }
 
-      const documentContent = YAML.stringify(props, null, 2);
-      await TextDocumentHelper.openDocument(documentContent, 'yaml');
+      DocumentHelper.openDocument(props, 'yaml').then(
+        doc => DocumentHelper.showDocument(doc, true),
+        vscode.window.showErrorMessage
+      );
     }).catch((e) => {
       vscode.window.showErrorMessage(`Error occurred getting topic properties: ${e}`);
-      console.log(e);
+      Logger.error(e);
     });
   }
 
@@ -124,7 +128,14 @@ export default class TopicController {
       TreeExplorerController.refreshTreeProvider(pulsarClusterTreeProvider);
     }).catch((e) => {
       vscode.window.showErrorMessage(`Error deleting topic: ${e}`);
-      console.log(e);
+      Logger.error(e);
     });
+  }
+
+  public static copyTopicAddress(topicNode: TopicNode) {
+    const url = new URL(`${topicNode.topicType}://${topicNode.tenantName}`);
+    url.pathname = path.join(topicNode.namespaceName, topicNode.label);
+
+    vscode.env.clipboard.writeText(url.href.replace(/\\/g, '/'));
   }
 }

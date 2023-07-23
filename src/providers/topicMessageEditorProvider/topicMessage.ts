@@ -3,6 +3,7 @@ import {MessageEvent} from "ws";
 import {TextEncoder} from "util";
 import {GetSchemaResponse, GetSchemaResponseTypeEnum} from "@apache-pulsar/pulsar-admin/dist/gen/models";
 import * as avro from 'avsc';
+import Logger from "../../utils/logger";
 
 const defaultSchema = new class implements GetSchemaResponse {
   data: string = "";
@@ -78,7 +79,7 @@ export default class TopicMessage implements TTopicMessage{
       const buf = avroSchema.toBuffer(jsonPayload);
       return avroSchema.fromBuffer(buf);
     }catch (e){
-      console.log(e);
+      Logger.error(e);
     }
 
     throw new Error("JSON schema validation failed");
@@ -94,7 +95,7 @@ export default class TopicMessage implements TTopicMessage{
       const buf = Buffer.from(payload, 'binary');
       return avroSchema.fromBuffer(buf);
     }catch(e){
-      console.log(e);
+      Logger.error(e);
     }
 
     throw new Error("AVRO schema validation failed");
@@ -111,7 +112,7 @@ export default class TopicMessage implements TTopicMessage{
       const buf = avroSchema.toBuffer(jsonPayload);
       return avroSchema.fromBuffer(buf);
     }catch (e){
-      console.log(e);
+      Logger.error(e);
     }
   }
 

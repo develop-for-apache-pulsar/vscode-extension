@@ -3,6 +3,7 @@ import {AstraApi, TStreamingClusterDetails, TStreamingTenantDetails} from "./ast
 import {ClusterConfigBuilder} from "../../providers/configurationProvider/clusterConfigBuilder";
 import {TPulsarAdminProviderCluster} from "../../types/tPulsarAdminProviderCluster";
 import {Provider} from "./provider";
+import Logger from "../../utils/logger";
 
 export class Settings implements TProviderSettings {
   public typeName = 'datastax-astra-streaming';
@@ -94,7 +95,7 @@ export class Settings implements TProviderSettings {
           clustersAndTenants.find((clusterAndTenants) => clusterAndTenants[0] === streamingTenant.clusterName)![1].push(streamingTenant.tenantName);
         }
       } catch (err: any) {
-        console.log(err);
+        Logger.error(err);
         this.wizard.postMessage(SaveProviderMessageError.pulsarAdminError, err.message);
       }
 

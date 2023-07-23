@@ -4,402 +4,387 @@ import {FunctionNode} from "../providers/pulsarClusterTreeDataProvider/nodes/fun
 import {PulsarClusterTreeDataProvider} from "../providers/pulsarClusterTreeDataProvider/explorer";
 import {TreeExplorerController} from "./treeExplorerController";
 import {FunctionInstanceNode} from "../providers/pulsarClusterTreeDataProvider/nodes/functionInstance";
-import * as YAML from "yaml";
-import TextDocumentHelper from "../utils/textDocumentHelper";
-import {ITopicNode, TopicNode} from "../providers/pulsarClusterTreeDataProvider/nodes/topic";
-import TopicMessageController from "./topicMessageController";
-import TopicController from "./topicController";
+import DocumentHelper from "../utils/documentHelper";
 import {TPulsarAdmin} from "../types/tPulsarAdmin";
+import {TSavedProviderConfig} from "../types/tSavedProviderConfig";
+import {TPulsarAdminProviderCluster} from "../types/tPulsarAdminProviderCluster";
+import {TPulsarAdminProviderTenant} from "../types/tPulsarAdminProviderTenant";
+import {FunctionConfig, FunctionConfigRuntimeEnum, FunctionStatus} from "@apache-pulsar/pulsar-admin/dist/gen/models";
+import * as fs from "fs";
+import * as path from "path";
+import {NamespaceNode} from "../providers/pulsarClusterTreeDataProvider/nodes/namespace";
+import FunctionService from "../services/function/functionService";
+import FunctionInstanceService from "../services/function/functionInstanceService";
+import TopicMessageService from "../services/topicMessages/topicMessageService";
+import {zipFolder} from "../utils/zip";
+import WatchFunctionDeploymentTask from "../services/function/watchFunctionDeploymentTask";
+import ProgressRunner from "../utils/progressRunner";
+import WatchFunctionStoppingTask from "../services/function/watchFunctionStoppingTask";
+import Logger from "../utils/logger";
+import ZipFunctionPackageTask from "../services/function/zipFunctionPackageTask";
+import WatchFunctionDeletingTask from "../services/function/watchFunctionDeletingTask";
+import WatchFunctionRestartTask from "../services/function/watchFunctionRestartTask";
 
 export default class FunctionController {
-  @trace('Start Function')
-  public static startFunction(functionNode: FunctionNode, pulsarClusterTreeProvider: PulsarClusterTreeDataProvider): void {
-    functionNode.pulsarAdmin.StartFunction(functionNode.tenantName, functionNode.namespaceName, functionNode.label).then(() => {
-      vscode.window.showInformationMessage(`Starting function '${functionNode.label}', polling for status...`);
-      functionNode.description = 'Starting';
-      functionNode.collapsibleState = vscode.TreeItemCollapsibleState.None;
-      pulsarClusterTreeProvider.refresh(functionNode);
+  public static chooseFunctionPackage(runtimeType: FunctionConfigRuntimeEnum, range: vscode.Range, fileFilters?: {[p: string]: string[]}): void {
+    const opts: vscode.OpenDialogOptions = {
+      canSelectFiles: (fileFilters !== undefined),
+      canSelectFolders: (fileFilters === undefined),
+      canSelectMany: false,
+      openLabel: `Select ${(fileFilters !== undefined) ? 'file' : 'folder'}`,
+      filters: fileFilters
+    };
 
-      let interval:any = null;
+    vscode.window.showOpenDialog(opts).then((uris: vscode.Uri[] | undefined) => {
+      if(uris === undefined) {
+        return;
+      }
 
-      // Stop polling after 120 seconds
-      const timeout = setTimeout(() => {
-        clearInterval(interval);
-        vscode.window.showErrorMessage(`Timed out waiting for function '${functionNode.label}' to start`);
-        TreeExplorerController.refreshTreeProvider(pulsarClusterTreeProvider);
-      }, (120 * 1000));
+      const uri = uris[0]; // Only one file can be selected
 
-      let i = 0;
+      // Find the range in the current document and replace with the path
+      const editor = vscode.window.activeTextEditor;
+      if(editor === undefined) {
+        return;
+      }
 
-      // Poll the function status until it is running
-      interval = setInterval(async () => {
-        i++;
-        functionNode.description = `Starting ${ '.'.repeat(i % 5) }`;
-        pulsarClusterTreeProvider.refresh(functionNode);
+      const document = editor.document;
+      const text = document.lineAt(range.start.line).text;
+      if(text === undefined) {
+        return;
+      }
 
-        try{
-          const status:any = await functionNode.pulsarAdmin.FunctionStatus(functionNode.tenantName, functionNode.namespaceName, functionNode.label);
+      const newText = text.replace(/(?<=:).*/i, ` ${uri.fsPath}`);
 
-          if (status !== undefined && status.numRunning !== undefined && status.numRunning > 0) {
-            clearTimeout(timeout);
-            clearInterval(interval);
-            vscode.window.showInformationMessage(`Function '${functionNode.label}' started in ${i} seconds with ${status.numRunning} instances`);
-            TreeExplorerController.refreshTreeProvider(pulsarClusterTreeProvider);
-          }
-        }catch (e) {
-          console.log(e);
-          vscode.window.showErrorMessage(`Could not poll function '${functionNode.label}': ${e}`);
-          clearInterval(interval);
-          clearTimeout(timeout);
-          TreeExplorerController.refreshTreeProvider(pulsarClusterTreeProvider);
-        }
-      }, 1000);
+      editor.edit(editBuilder => {
+        editBuilder.replace(document.lineAt(range.start.line).range, newText);
+      });
+    });
 
-    }).catch((e) => {
-      vscode.window.showErrorMessage(`Error trying to start function '${functionNode.label}': ${e}`);
-      console.log(e);
+    // no op on error
+  }
+
+  public static async startFunction(functionNode: FunctionNode, pulsarClusterTreeProvider: PulsarClusterTreeDataProvider): Promise<void> {
+    Logger.debug("Sending start command");
+    const functionService = new FunctionService(functionNode.pulsarAdmin);
+    const task = new WatchFunctionDeploymentTask(functionNode.tenantName, functionNode.namespaceName, functionNode.label, functionService, pulsarClusterTreeProvider);
+
+    const startPromises = Promise.all([
+      functionService.startFunction(functionNode.tenantName, functionNode.namespaceName, functionNode.label),
+      new ProgressRunner<FunctionStatus>("Start function").run(task)
+    ]);
+
+    await startPromises.then(() => {
+    }, (reason: any) => {
+      Logger.error(reason);
+      throw new Error(reason);
+    }).finally(() => {
+      TreeExplorerController.refreshTreeProvider(pulsarClusterTreeProvider);
     });
   }
 
-  @trace('Stop Function')
-  public static stopFunction(functionNode: FunctionNode, pulsarClusterTreeProvider: PulsarClusterTreeDataProvider): void {
-    functionNode.pulsarAdmin.StopFunction(functionNode.tenantName, functionNode.namespaceName, functionNode.label).then(() => {
-      vscode.window.showInformationMessage(`Stopping function '${functionNode.label}', polling for status...`);
-      functionNode.description = 'Stopping';
-      functionNode.collapsibleState = vscode.TreeItemCollapsibleState.None;
-      pulsarClusterTreeProvider.refresh(functionNode);
+  public static async stopFunction(functionNode: FunctionNode, pulsarClusterTreeProvider: PulsarClusterTreeDataProvider): Promise<void> {
+    Logger.debug("Sending stop command");
+    const functionService = new FunctionService(functionNode.pulsarAdmin);
+    const task = new WatchFunctionStoppingTask(functionNode.tenantName, functionNode.namespaceName, functionNode.label, functionService, pulsarClusterTreeProvider);
 
-      let interval:any = null;
+    const stopPromises = Promise.all([
+      functionService.stopFunction(functionNode.tenantName, functionNode.namespaceName, functionNode.label),
+      new ProgressRunner<FunctionStatus>("Stop function").run(task)
+    ]);
 
-      // Stop polling after N seconds
-      const timeout = setTimeout(() => {
-        clearInterval(interval);
-        vscode.window.showErrorMessage(`Timed out waiting for function '${functionNode.label}' to stop`);
-        TreeExplorerController.refreshTreeProvider(pulsarClusterTreeProvider);
-      }, (30 * 1000));
-
-      let i = 0;
-
-      // Poll the function status until it is stopped
-      interval = setInterval(async () => {
-        i++;
-        functionNode.description = `Stopping ${ '.'.repeat(i % 5) }`;
-        pulsarClusterTreeProvider.refresh(functionNode);
-
-        try{
-          const status:any = await functionNode.pulsarAdmin.FunctionStatus(functionNode.tenantName, functionNode.namespaceName, functionNode.label);
-
-          if (status !== undefined && status.numRunning !== undefined && status.numRunning < 1) {
-            clearTimeout(timeout);
-            clearInterval(interval);
-            vscode.window.showInformationMessage(`Function '${functionNode.label}' stopped in ${i} second${i>1?'s':''}`);
-            TreeExplorerController.refreshTreeProvider(pulsarClusterTreeProvider);
-          }
-        }catch (e) {
-          console.log(e);
-          vscode.window.showErrorMessage(`Could not poll function '${functionNode.label}': ${e}`);
-          clearInterval(interval);
-          clearTimeout(timeout);
-          TreeExplorerController.refreshTreeProvider(pulsarClusterTreeProvider);
-        }
-      }, 1000);
-    }).catch((e) => {
-      vscode.window.showErrorMessage(`Error stopping function '${functionNode.label}': ${e}`);
-      console.log(e);
+    await stopPromises.then(() => {
+    }, (reason: any) => {
+      Logger.error(reason);
+      throw new Error(reason);
+    }).finally(() => {
+      TreeExplorerController.refreshTreeProvider(pulsarClusterTreeProvider);
     });
   }
 
-  @trace('Restart Function')
-  public static restartFunction(functionNode: FunctionNode,pulsarClusterTreeProvider: PulsarClusterTreeDataProvider): void {
-    functionNode.pulsarAdmin.RestartFunction(functionNode.tenantName, functionNode.namespaceName, functionNode.label).then(() => {
-      vscode.window.showInformationMessage(`Restarting function '${functionNode.label}', polling for status...`);
-      functionNode.description = 'Starting';
-      functionNode.collapsibleState = vscode.TreeItemCollapsibleState.None;
-      pulsarClusterTreeProvider.refresh(functionNode);
+  public static async restartFunction(functionNode: FunctionNode,pulsarClusterTreeProvider: PulsarClusterTreeDataProvider): Promise<void> {
+    Logger.debug("Sending restart command");
+    const functionService = new FunctionService(functionNode.pulsarAdmin);
+    const task = new WatchFunctionRestartTask(functionNode.tenantName, functionNode.namespaceName, functionNode.label, functionService, pulsarClusterTreeProvider);
 
-      let interval:any = null;
+    const restartPromises = Promise.all([
+      functionService.restartFunction(functionNode.tenantName, functionNode.namespaceName, functionNode.label),
+      new ProgressRunner<FunctionStatus>("Restart function").run(task)
+    ]);
 
-      // Stop polling after 120 seconds
-      const timeout = setTimeout(() => {
-        clearInterval(interval);
-        vscode.window.showErrorMessage(`Timed out waiting for function '${functionNode.label}' to restart`);
-        TreeExplorerController.refreshTreeProvider(pulsarClusterTreeProvider);
-      }, (120 * 1000));
-
-      let i = 0;
-
-      // Poll the function status until it is running
-      interval = setInterval(async () => {
-        i++;
-        functionNode.description = `Restarting ${ '.'.repeat(i % 5) }`;
-        pulsarClusterTreeProvider.refresh(functionNode);
-
-        try{
-          const status:any = await functionNode.pulsarAdmin.FunctionStatus(functionNode.tenantName, functionNode.namespaceName, functionNode.label);
-
-          if (status !== undefined && status.numRunning !== undefined && status.numRunning > 0) {
-            clearTimeout(timeout);
-            clearInterval(interval);
-            vscode.window.showInformationMessage(`Function '${functionNode.label}' restarted in ${i} seconds with ${status.numRunning} instances`);
-            TreeExplorerController.refreshTreeProvider(pulsarClusterTreeProvider);
-          }
-        }catch (e) {
-          console.log(e);
-          vscode.window.showErrorMessage(`Could not poll function '${functionNode.label}': ${e}`);
-          clearInterval(interval);
-          clearTimeout(timeout);
-          TreeExplorerController.refreshTreeProvider(pulsarClusterTreeProvider);
-        }
-      }, 1000);
-    }).catch((e) => {
-      vscode.window.showErrorMessage(`Error trying to restart function '${functionNode.label}': ${e}`);
-      console.log(e);
+    await restartPromises.then(() => {
+    }, (reason: any) => {
+      Logger.error(reason);
+      throw new Error(reason);
+    }).finally(() => {
+      TreeExplorerController.refreshTreeProvider(pulsarClusterTreeProvider);
     });
   }
 
-  @trace('Function statistics')
   public static showFunctionStatistics(functionNode: FunctionNode): void {
-    functionNode.pulsarAdmin.FunctionStats(functionNode.tenantName, functionNode.namespaceName, functionNode.label).then(async (stats) => {
-      if (stats === undefined) {
-        vscode.window.showErrorMessage(`Error occurred getting function statistics`);
-        return;
-      }
+    Logger.debug("Show stats");
+    const functionService = new FunctionService(functionNode.pulsarAdmin);
 
-      const documentContent = YAML.stringify(stats, null, 2);
-      await TextDocumentHelper.openDocument(documentContent, 'yaml');
-    }).catch((e) => {
-      vscode.window.showErrorMessage(`Error occurred getting function statistics: ${e}`);
-      console.log(e);
-    });
+    functionService.getStatistics(functionNode.tenantName, functionNode.namespaceName, functionNode.label)
+      .then(functionStatus => {
+        DocumentHelper.openDocument(functionStatus, 'yaml').then(
+          doc => DocumentHelper.showDocument(doc, true),
+          vscode.window.showErrorMessage
+        );
+      })
+      .catch(err => vscode.window.showErrorMessage(err.message));
   }
 
-  @trace('Function status')
   public static showFunctionStatus(functionNode: FunctionNode): void {
-    functionNode.pulsarAdmin.FunctionStatus(functionNode.tenantName, functionNode.namespaceName, functionNode.label).then(async (status) => {
-      if (status === undefined) {
-        vscode.window.showErrorMessage(`Error occurred getting function status`);
-        return;
-      }
+    Logger.debug("Show status");
+    const functionService = new FunctionService(functionNode.pulsarAdmin);
 
-      const documentContent = YAML.stringify(status, null, 2);
-      await TextDocumentHelper.openDocument(documentContent, 'yaml');
-    }).catch((e) => {
-      vscode.window.showErrorMessage(`Error occurred getting function status: ${e}`);
-      console.log(e);
-    });
+    functionService.getStatus(functionNode.tenantName, functionNode.namespaceName, functionNode.label)
+      .then(functionStatus => {
+        DocumentHelper.openDocument(functionStatus, 'yaml').then(
+          doc => DocumentHelper.showDocument(doc, true),
+          vscode.window.showErrorMessage
+        );
+      })
+      .catch(err => vscode.window.showErrorMessage(err.message));
   }
 
-  @trace('Function info')
-  public static async showFunctionInfo(functionNode: FunctionNode): Promise<void> {
-    const documentContent = YAML.stringify(functionNode.functionConfig, null, 2);
-    await TextDocumentHelper.openDocument(documentContent, 'yaml');
+  public static showFunctionInfo(functionNode: FunctionNode): void {
+    Logger.debug("Show info");
+    const functionService = new FunctionService(functionNode.pulsarAdmin);
+
+    functionService.getFunctionInfo(functionNode.tenantName, functionNode.namespaceName, functionNode.label)
+      .then(functionInfo => {
+        DocumentHelper.openDocument(functionInfo, 'yaml').then(
+          doc => DocumentHelper.showDocument(doc, true),
+          vscode.window.showErrorMessage
+        );
+      })
+      .catch(err => vscode.window.showErrorMessage(err.message));
   }
 
-  @trace('Show function topics')
+  @trace('Watch function topics')
   public static async watchFunctionTopics(functionNode: FunctionNode): Promise<void> {
     if(functionNode.functionConfig === undefined || functionNode.functionConfig.inputSpecs === undefined) {
       return;
     }
 
-    let watchPromises: Promise<void>[] = [];
+    Logger.debug("Watch topics");
+    const topicMessageService = new TopicMessageService(functionNode.pulsarAdmin);
 
     // Open the input topics first
+    let watchDetails: any[] = [];
 
     for (const inputTopicKey of Object.keys(functionNode.functionConfig.inputSpecs)) {
-      try{
-        const inputTopicNode: ITopicNode = await this.buildTopicNode(functionNode.pulsarAdmin, inputTopicKey, functionNode.providerTypeName, functionNode.clusterName);
-        watchPromises.push(TopicMessageController.watchTopicMessages(inputTopicNode));
-      } catch(e) {
-        console.log(e);
-      }
+      watchDetails.push({
+        topicAddress: inputTopicKey,
+        providerTypeName: functionNode.providerTypeName,
+        clusterName: functionNode.clusterName
+      });
     }
 
-    Promise.all<void>(watchPromises).then(() => {
-      // no op
-    }).catch((e) => {
-      vscode.window.showErrorMessage(`Error occurred watching input topic: ${e}`);
-      console.log(e);
-    });
+    await topicMessageService.watchTopics(watchDetails).catch(err => vscode.window.showErrorMessage(err.message));
 
-    watchPromises = [];
+    watchDetails = [];
 
-    // Then open everything else
-    try{
-      if(functionNode.functionConfig.output !== undefined && functionNode.functionConfig.output !== null && functionNode.functionConfig.output.length > 0) {
-        const outputTopicNode: ITopicNode = await this.buildTopicNode(functionNode.pulsarAdmin, functionNode.functionConfig.output, functionNode.providerTypeName, functionNode.clusterName);
-        watchPromises.push(TopicMessageController.watchTopicMessages(outputTopicNode));
-      }
-    } catch(e) {
-      vscode.window.showErrorMessage(`Error occurred watching output topic: ${e}`);
-      console.log(e);
+    if((functionNode.functionConfig.output?.length ?? 0) > 0) {
+      watchDetails.push({
+        topicAddress: functionNode.functionConfig.output,
+        providerTypeName: functionNode.providerTypeName,
+        clusterName: functionNode.clusterName
+      });
     }
 
-    try{
-      if(functionNode.functionConfig.logTopic !== undefined && functionNode.functionConfig.logTopic !== null && functionNode.functionConfig.logTopic.length > 0) {
-        const logTopicNode: ITopicNode = await this.buildTopicNode(functionNode.pulsarAdmin, functionNode.functionConfig.logTopic, functionNode.providerTypeName, functionNode.clusterName);
-        watchPromises.push(TopicMessageController.watchTopicMessages(logTopicNode));
-      }
-    }catch (e) {
-      vscode.window.showErrorMessage(`Error occurred watching log topic: ${e}`);
-      console.log(e);
+    if((functionNode.functionConfig.logTopic?.length ?? 0) > 0) {
+      watchDetails.push({
+        topicAddress: functionNode.functionConfig.logTopic,
+        providerTypeName: functionNode.providerTypeName,
+        clusterName: functionNode.clusterName
+      });
     }
 
-    try{
-      if(functionNode.functionConfig.deadLetterTopic !== undefined && functionNode.functionConfig.deadLetterTopic !== null && functionNode.functionConfig.deadLetterTopic.length > 0) {
-        const deadLetterTopicNode: ITopicNode = await this.buildTopicNode(functionNode.pulsarAdmin, functionNode.functionConfig.deadLetterTopic, functionNode.providerTypeName, functionNode.clusterName);
-        watchPromises.push(TopicMessageController.watchTopicMessages(deadLetterTopicNode));
-      }
-    }catch(e) {
-      vscode.window.showErrorMessage(`Error occurred watching dead letter topic: ${e}`);
-      console.log(e);
+    if((functionNode.functionConfig.deadLetterTopic?.length ?? 0) > 0) {
+      watchDetails.push({
+        topicAddress: functionNode.functionConfig.deadLetterTopic,
+        providerTypeName: functionNode.providerTypeName,
+        clusterName: functionNode.clusterName
+      });
     }
 
-    Promise.all<void>(watchPromises).then(() => {
-      //no op
-    }).catch((e) => {
-      vscode.window.showErrorMessage(`Error occurred watching topic: ${e}`);
-      console.log(e);
-    });
+    await topicMessageService.watchTopics(watchDetails).catch(err => vscode.window.showErrorMessage(err.message));
   }
 
-  @trace('Delete function')
   public static async deleteFunction(functionNode: FunctionNode, pulsarClusterTreeProvider: PulsarClusterTreeDataProvider): Promise<void> {
-    functionNode.pulsarAdmin.DeleteFunction(functionNode.tenantName, functionNode.namespaceName, functionNode.label).then(() => {
-      vscode.window.showInformationMessage(`Function '${functionNode.label}' deleted`);
+
+    const functionService = new FunctionService(functionNode.pulsarAdmin);
+
+    const confirmDelete = await vscode.window.showWarningMessage(`Are you sure you want to delete function '${functionNode.label}'?`, { modal: true }, 'Yes', 'No');
+    if (confirmDelete !== 'Yes') {
+      return;
+    }
+
+    const task = new WatchFunctionDeletingTask(functionNode.tenantName, functionNode.namespaceName, functionNode.label, functionService, pulsarClusterTreeProvider);
+
+    Logger.debug("Sending delete command");
+    const deletePromises = Promise.all([
+      functionService.deleteFunction(functionNode.tenantName, functionNode.namespaceName, functionNode.label),
+      new ProgressRunner<FunctionStatus>("Delete function").run(task)
+    ]);
+
+    await deletePromises.then(() => {
+    }, (reason: any) => {
+      Logger.error(reason);
+      throw new Error(reason);
+    }).finally(() => {
       TreeExplorerController.refreshTreeProvider(pulsarClusterTreeProvider);
-    }).catch((e) => {
-      vscode.window.showErrorMessage(`Error deleting function: ${e}`);
-      console.log(e);
     });
   }
 
-  @trace('Start function instance')
   public static startFunctionInstance(functionInstanceNode: FunctionInstanceNode, context: vscode.ExtensionContext, pulsarClusterTreeProvider: PulsarClusterTreeDataProvider): void {
-    const instanceId = this.parseInstanceId(functionInstanceNode.label);
+    let instanceId: number;
 
-    if(instanceId === undefined) {
-      return;
-    }
-
-    functionInstanceNode.pulsarAdmin.StartFunction(functionInstanceNode.tenantName, functionInstanceNode.namespaceName, functionInstanceNode.functionName, instanceId).then(() => {
-      vscode.window.showInformationMessage(`Function instance '${functionInstanceNode.label}' started`);
-      TreeExplorerController.refreshTreeProvider(pulsarClusterTreeProvider);
-    }).catch((e) => {
-      vscode.window.showErrorMessage(`Error starting function instance: ${e}`);
-      console.log(e);
-    });
-  }
-
-  @trace('Stop function instance')
-  public static stopFunctionInstance(functionInstanceNode: FunctionInstanceNode, context: vscode.ExtensionContext, pulsarClusterTreeProvider: PulsarClusterTreeDataProvider): void {
-    const instanceId = this.parseInstanceId(functionInstanceNode.label);
-
-    if(instanceId === undefined) {
-      return;
-    }
-
-    functionInstanceNode.pulsarAdmin.StopFunction(functionInstanceNode.tenantName, functionInstanceNode.namespaceName, functionInstanceNode.functionName, instanceId).then(() => {
-      vscode.window.showInformationMessage(`Function instance '${functionInstanceNode.label}' stopped`);
-      TreeExplorerController.refreshTreeProvider(pulsarClusterTreeProvider);
-    }).catch((e) => {
-      vscode.window.showErrorMessage(`Error stopping function instance: ${e}`);
-      console.log(e);
-    });
-  }
-
-  @trace('Restart function instance')
-  public static restartFunctionInstance(functionInstanceNode: FunctionInstanceNode, context: vscode.ExtensionContext, pulsarClusterTreeProvider: PulsarClusterTreeDataProvider): void {
-    const instanceId = this.parseInstanceId(functionInstanceNode.label);
-
-    if(instanceId === undefined) {
-      return;
-    }
-
-    functionInstanceNode.pulsarAdmin.RestartFunction(functionInstanceNode.tenantName, functionInstanceNode.namespaceName, functionInstanceNode.functionName, instanceId).then(() => {
-      vscode.window.showInformationMessage(`Function instance '${functionInstanceNode.label}' restarted`);
-      TreeExplorerController.refreshTreeProvider(pulsarClusterTreeProvider);
-    }).catch((e) => {
-      vscode.window.showErrorMessage(`Error restarting function instance: ${e}`);
-      console.log(e);
-    });
-  }
-
-  private static parseInstanceId(instanceId: string): number | undefined {
     try{
-      return parseInt(instanceId);
+      instanceId = parseInt(functionInstanceNode.label);
     }catch (e) {
       vscode.window.showErrorMessage(`Error parsing instanceId as number: ${e}`);
-      console.log(e);
+      return;
     }
 
-    return undefined;
+    Logger.debug("Sending start instance command");
+    const functionInstanceService = new FunctionInstanceService(functionInstanceNode.pulsarAdmin);
+
+    functionInstanceService.startFunctionInstance(functionInstanceNode.tenantName, functionInstanceNode.namespaceName, functionInstanceNode.functionName, instanceId).then(() => {
+      vscode.window.showInformationMessage(`Function instance '${functionInstanceNode.label}' started`);
+      TreeExplorerController.refreshTreeProvider(pulsarClusterTreeProvider);
+    }).catch(err => vscode.window.showErrorMessage(err.message));
   }
 
-  private static async buildTopicNode(pulsarAdmin: TPulsarAdmin, topicAddress: string, providerTypeName: string, clusterName: string): Promise<ITopicNode> {
-    let parsedTopicAddress: URL;
-
-    if(!topicAddress.startsWith('persistent') && !topicAddress.startsWith('non-persistent')) {
-      // The topic address is not a full URL, so we need to attempt to fix
-      const tenantName = topicAddress.split('/')[0];
-      const namespaceName = topicAddress.split('/')[1];
-      const topicName = topicAddress.split('/')[2];
-      console.log(topicAddress);
-      console.log(tenantName);
-      console.log(namespaceName);
-      console.log(topicName);
-
-      let exists = await pulsarAdmin.TopicExists('persistent', tenantName, namespaceName, topicName);
-      if(exists === true){
-        topicAddress = `persistent://${tenantName}/${namespaceName}/${topicName}`;
-      }else{
-        exists = await pulsarAdmin.TopicExists('non-persistent', tenantName, namespaceName, topicName);
-        if(exists === true){
-          topicAddress = `non-persistent://${tenantName}/${namespaceName}/${topicName}`;
-        }
-      }
-
-      if(exists === false) {
-        throw new Error(`Could not find topic at address: ${topicAddress}`);
-      }
-    }
+  public static stopFunctionInstance(functionInstanceNode: FunctionInstanceNode, context: vscode.ExtensionContext, pulsarClusterTreeProvider: PulsarClusterTreeDataProvider): void {
+    let instanceId: number;
 
     try{
-      parsedTopicAddress = TopicController.parseTopicAddress(topicAddress);
-    } catch(e) {
-      throw new Error(`Error parsing invalid topic address: ${topicAddress}`);
+      instanceId = parseInt(functionInstanceNode.label);
+    }catch (e) {
+      vscode.window.showErrorMessage(`Error parsing instanceId as number: ${e}`);
+      return;
     }
 
-    const topicName = TopicController.parseTopicName(parsedTopicAddress);
+    Logger.debug("Sending stop instance command");
+    const functionInstanceService = new FunctionInstanceService(functionInstanceNode.pulsarAdmin);
 
-    if(topicName === undefined) {
-      throw new Error(`Error parsing topic name: ${topicAddress}`);
+    functionInstanceService.stopFunctionInstance(functionInstanceNode.tenantName, functionInstanceNode.namespaceName, functionInstanceNode.functionName, instanceId).then(() => {
+      vscode.window.showInformationMessage(`Function instance '${functionInstanceNode.label}' stopped`);
+      TreeExplorerController.refreshTreeProvider(pulsarClusterTreeProvider);
+    }).catch(err => vscode.window.showErrorMessage(err.message));
+  }
+
+  public static restartFunctionInstance(functionInstanceNode: FunctionInstanceNode, context: vscode.ExtensionContext, pulsarClusterTreeProvider: PulsarClusterTreeDataProvider): void {
+    let instanceId: number;
+
+    try{
+      instanceId = parseInt(functionInstanceNode.label);
+    }catch (e) {
+      vscode.window.showErrorMessage(`Error parsing instanceId as number: ${e}`);
+      return;
     }
 
-    const topicType = TopicController.parseTopicType(parsedTopicAddress);
+    Logger.debug("Sending restart instance command");
+    const functionInstanceService = new FunctionInstanceService(functionInstanceNode.pulsarAdmin);
 
-    if(topicType === undefined) {
-      throw new Error(`Error parsing topic type: ${topicAddress}`);
+    functionInstanceService.restartFunctionInstance(functionInstanceNode.tenantName, functionInstanceNode.namespaceName, functionInstanceNode.functionName, instanceId).then(() => {
+      vscode.window.showInformationMessage(`Function instance '${functionInstanceNode.label}' restarted`);
+      pulsarClusterTreeProvider.refresh();
+    }).catch(err => vscode.window.showErrorMessage(err.message));
+  }
+
+  public static async showNewFunctionTemplate(namespaceNode: NamespaceNode) {
+    Logger.debug("Showing new function template");
+    const functionService = new FunctionService(namespaceNode.pulsarAdmin);
+    const newFunctionTemplate = functionService.getFunctionTemplate('yaml', namespaceNode.providerTypeName, namespaceNode.clusterName, namespaceNode.tenantName, namespaceNode.label);
+
+    DocumentHelper.openDocument(newFunctionTemplate, 'yaml').then(
+      doc => DocumentHelper.showDocument(doc, false),
+      vscode.window.showErrorMessage
+    );
+  }
+
+  public static async deployFunction(pulsarClusterTreeProvider: PulsarClusterTreeDataProvider,
+                                     context:vscode.ExtensionContext,
+                                     functionConfig: FunctionConfig,
+                                     providerConfig: TSavedProviderConfig,
+                                     providerCluster: TPulsarAdminProviderCluster,
+                                     providerTenant: TPulsarAdminProviderTenant,
+                                     pulsarAdmin: TPulsarAdmin): Promise<void> {
+    Logger.debug("Deploying function");
+
+    // Find runtime package
+    let functionRuntimeFile = FunctionService.findFunctionRuntimeFilePath(functionConfig);
+    if(functionRuntimeFile === undefined) {
+      vscode.window.showErrorMessage("Provide a valid file path for either 'py', 'jar', or 'go'.");
+      return;
     }
 
-    const topicTenant = TopicController.parseTopicTenant(parsedTopicAddress);
+    const functionPackageIsDir = fs.lstatSync(functionRuntimeFile).isDirectory();
 
-    if(topicTenant === undefined) {
-      throw new Error(`Error parsing topic tenant: ${topicAddress}`);
+    // Zip the package if it's a directory
+    if(functionPackageIsDir) {
+      Logger.debug("Zipping function package (this could take a bit of time)...");
+      const functionRuntimeFolder = functionRuntimeFile; // It's actually the path to a folder
+
+      const zipFileUri = vscode.Uri.file(path.join(context.globalStorageUri.fsPath, `${functionConfig.name}.zip`)); // Use vscode global storage path
+
+      if(!fs.existsSync(context.globalStorageUri.fsPath)) {
+        fs.mkdirSync(context.globalStorageUri.fsPath);
+      }
+
+      const task = new ZipFunctionPackageTask(functionRuntimeFolder, zipFileUri.fsPath);
+
+      const zipPromises = Promise.all<[Promise<void>, Promise<void>]>([
+        zipFolder(functionRuntimeFolder, zipFileUri.fsPath),
+        new ProgressRunner<Uint8Array>("Creating function package").run(task)
+      ]);
+
+      await zipPromises.then(() => {
+        functionRuntimeFile = zipFileUri.fsPath; //Reset the var to the zip file
+      }, (reason: any) => {
+        Logger.error(reason);
+        try{ fs.rmSync(zipFileUri.fsPath, { force: true, maxRetries: 5, recursive: true, retryDelay: 250 }); }catch{} //Clean up
+        throw new Error(reason);
+      });
     }
 
-    const topicNamespace = TopicController.parseTopicNamespace(parsedTopicAddress);
-
-    if(topicNamespace === undefined) {
-      throw new Error(`Error parsing topic namespace: ${topicAddress}`);
+    // Validate the function package exists
+    if(!fs.existsSync(functionRuntimeFile)) {
+      throw new Error(`File ${functionRuntimeFile} does not exist`);
     }
 
-    return new TopicNode(pulsarAdmin,
-      topicName,
-      topicType,
-      providerTypeName,
-      clusterName,
-      topicTenant,
-      topicNamespace,
-      undefined);
+    pulsarAdmin = pulsarAdmin!;
+    const functionService = new FunctionService(pulsarAdmin);
+
+    // Attempt to delete the function if it already exists
+    try{
+      Logger.debug("Attempting to remove existing function");
+      await functionService.deleteFunction(<string>functionConfig.tenant, <string>functionConfig.namespace, <string>functionConfig.name);
+    }catch (e) {
+      // no op
+    }
+
+    const task = new WatchFunctionDeploymentTask(<string>functionConfig.tenant, <string>functionConfig.namespace, <string>functionConfig.name, functionService, pulsarClusterTreeProvider);
+
+    Logger.debug("Registering function");
+    const deployPromises = Promise.all([
+      functionService.createFunction(functionConfig, functionRuntimeFile),
+      new ProgressRunner<FunctionStatus>("Deploy function").run(task)
+    ]);
+
+    await deployPromises.then(() => {
+    }, (reason: any) => {
+      Logger.error(reason);
+      throw new Error(reason);
+    }).finally(() => {
+      if(functionPackageIsDir) {
+        try{ fs.rmSync(functionRuntimeFile!, { force: true, maxRetries: 5, recursive: true, retryDelay: 250 }); }catch{} //Clean up
+      }
+    });
   }
 }

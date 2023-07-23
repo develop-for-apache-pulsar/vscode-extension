@@ -9,6 +9,7 @@ import {
   FunctionStatus, FunctionConfig
 } from "@apache-pulsar/pulsar-admin/dist/gen/models";
 import {TopicStats} from '../pulsarAdminProviders/base-provider/topicStats';
+import {PathLike} from "fs";
 
 export type TPulsarAdmin = {
   providerTypeName: string;
@@ -54,6 +55,7 @@ export type TPulsarAdmin = {
   TopicStats(topicType:string, tenantName: string, namespaceName: string, topicName: string): Promise<TopicStats | undefined>;
   TopicProperties(topicType:string, tenantName: string, namespaceName: string, topicName: string): Promise<[{ [key: string]: string; }] | undefined>;
   DeleteTopic(topicType:string, tenantName: string, namespaceName: string, topicName: string): Promise<void>;
+  CreateFunction(functionConfig: FunctionConfig, filePath: PathLike): Promise<void>;
 };
 
 

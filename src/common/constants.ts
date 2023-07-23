@@ -15,9 +15,11 @@ export const COMMAND_ADD_CLUSTER_CONFIG = 'extension.vsDevelopPulsarAddClusterCo
 export const COMMAND_REMOVE_CLUSTER_CONFIG = 'extension.vsDevelopPulsarRemoveClusterConfig';
 export const COMMAND_WATCH_TOPIC_MESSAGES = 'extension.vsDevelopPulsarWatchTopicMessages';
 export const COMMAND_CREATE_TOPIC = 'extension.vsDevelopPulsarCreateTopic';
+export const COMMAND_CREATE_FUNCTION = 'extension.vsDevelopPulsarCreateFunction';
 export const COMMAND_SHOW_TOPIC_SCHEMA = 'extension.vsDevelopPulsarShowTopicSchema';
 export const COMMAND_TOPIC_STATISTICS = 'extension.vsDevelopPulsarTopicStatistics';
 export const COMMAND_TOPIC_PROPERTIES = 'extension.vsDevelopPulsarTopicProperties';
+export const COMMAND_TOPIC_COPY_ADDRESS = 'extension.vsDevelopPulsarTopicCopyAddress';
 export const COMMAND_DELETE_TOPIC = 'extension.vsDevelopPulsarDeleteTopic';
 export const COMMAND_STOP_FUNCTION = 'extension.vsDevelopPulsarStopFunction';
 export const COMMAND_RESTART_FUNCTION = 'extension.vsDevelopPulsarRestartFunction';
@@ -27,14 +29,15 @@ export const COMMAND_FUNCTION_STATUS = 'extension.vsDevelopPulsarFunctionStatus'
 export const COMMAND_FUNCTION_INFO = 'extension.vsDevelopPulsarFunctionInfo';
 export const COMMAND_FUNCTION_DELETE = 'extension.vsDevelopPulsarFunctionDelete';
 export const COMMAND_FUNCTION_WATCH_TOPICS = 'extension.vsDevelopPulsarWatchFunctionTopics';
+export const COMMAND_DEPLOY_FUNCTION = 'extension.vsDevelopPulsarDeployFunction';
 export const COMMAND_STOP_FUNCTION_INSTANCE = 'extension.vsDevelopPulsarStopFunctionInstance';
 export const COMMAND_RESTART_FUNCTION_INSTANCE = 'extension.vsDevelopPulsarRestartFunctionInstance';
 export const COMMAND_START_FUNCTION_INSTANCE = 'extension.vsDevelopPulsarStartFunctionInstance';
+export const COMMAND_FUNCTION_PACKAGE_CHOOSER = 'extension.vsDevelopPulsarFunctionPackageChooser';
 
 // PROVIDERS
 export const PROVIDER_CLUSTER_TREE = 'extension.vsPulsarClusterExplorer';
 export const TOPIC_MESSAGE_CUSTOM_EDITOR_VIEW_TYPE = 'extension.topicMessageView';
-
 
 export const CONTEXT_VALUES = {
   error: 'vsDevelopPulsar.error',
